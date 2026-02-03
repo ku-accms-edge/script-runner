@@ -200,3 +200,7 @@ Private リポジトリに対してトークンが設定されていません。
 ### リソース制限の変更
 
 `overlays/my-job/job-patch.yaml`を編集する．
+
+### jobのpodにラベルを付与
+
+`overlays/my-job/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
