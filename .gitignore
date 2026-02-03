@@ -1,0 +1,24 @@
+# Secrets - 絶対にコミットしない
+**/secret.yaml
+**/*.secret.yaml
+**/*-secret.yaml
+
+# 環境固有のオーバーレイ
+overlays/*/
+!overlays/example/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Kubernetes
+*.kubeconfig
+
+# その他
+*.log
+*.tmp

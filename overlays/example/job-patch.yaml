@@ -1,0 +1,50 @@
+# =============================================================================
+# Job カスタマイズ用パッチ
+# =============================================================================
+# リソース制限やその他のJob設定をカスタマイズする場合に使用します。
+#
+# 使い方:
+#   kustomization.yaml に以下を追加:
+#   patches:
+#     - path: job-patch.yaml
+# =============================================================================
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: script-runner
+spec:
+  # リトライ回数
+  backoffLimit: 2
+
+  # タイムアウト (10分)
+  activeDeadlineSeconds: 600
+
+  template:
+    spec:
+      # initContainer のリソース制限
+      initContainers:
+        - name: git-clone
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+
+      # mainContainer のリソース制限
+      containers:
+        - name: script-runner
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "2000m"
+
+          # 追加の環境変数
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
