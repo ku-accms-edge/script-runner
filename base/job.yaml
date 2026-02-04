@@ -15,6 +15,13 @@ spec:
         app.kubernetes.io/name: script-runner
         app.kubernetes.io/component: job
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
       restartPolicy: Never
 
       # ソースコードを共有するためのボリューム
@@ -89,6 +96,11 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+          securityContext: # ほぼおまじない (諸々の権限を限定しているので必要）
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
 
       # Python スクリプトを実行するメインコンテナ
       containers:
@@ -112,3 +124,8 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "1000m"
+          securityContext: # ほぼおまじない (諸々の権限を限定しているので必要）
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
