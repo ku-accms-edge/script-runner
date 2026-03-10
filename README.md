@@ -2,31 +2,35 @@
 
 Gitリポジトリから直接Pythonスクリプトを実行するためのKubernetesマニフェスト集です。
 
-コンテナイメージをビルドすることなく、環境変数でGitリポジトリのURLと実行コマンドを指定するだけで、任意のPythonスクリプトをKubernetes Job として実行できます。
+コンテナイメージをビルドすることなく、環境変数でGitリポジトリのURLと実行コマンドを指定するだけで、任意のPythonスクリプトをKubernetes Job または CronJob として実行できます。
 
 ## 特徴
 
 - **ビルド不要**: 公式のPythonイメージとalpine/gitイメージを使用
 - **柔軟な設定**: Kustomizeで環境ごとの設定を簡単に管理
+- **Job / CronJob 対応**: 一度きりの実行にも、定期実行にも対応
 - **Private リポジトリ対応**: GitHub Personal Access Token による認証をサポート
 - **依存関係の自動インストール**: `requirements.txt` と `pyproject.toml` の両方に対応
 
+---
+
 ## クイックスタート
 
-### 1. リポジトリをクローン
+### Job (一度きりの実行) の場合
+#### 1. リポジトリをクローン
 
 ```bash
 git clone https://github.com/XXX/git-script-runner.git
 cd git-script-runner
 ```
 
-### 2. オーバーレイを作成
+#### 2. オーバーレイを作成
 
 ```bash
 cp -r overlays/example overlays/my-job
 ```
 
-### 3. 設定をカスタマイズ
+#### 3. 設定をカスタマイズ
 
 `overlays/my-job/kustomization.yaml` を編集:
 
@@ -50,7 +54,7 @@ configMapGenerator:
       - SCRIPT_COMMAND=python main.py --arg1 value1
 ```
 
-### 4. 実行
+#### 4. 実行
 
 ```bash
 # dry-run で確認
@@ -70,11 +74,87 @@ chmox +x ./del-and-run.sh
 ./del-and-run.sh overlays/my-job
 ```
 
-### 5. 削除
+#### 5. 削除
 
 ```bash
 kubectl delete -k overlays/my-job
 ```
+
+---
+
+### CronJob (定期実行) の場合
+#### 1. リポジトリをクローン
+
+```bash
+git clone https://github.com/XXX/git-script-runner.git
+cd git-script-runner
+```
+
+#### 2. オーバーレイを作成
+
+```bash
+cp -r overlays/example-cronjob overlays/my-cronjob
+```
+
+#### 3. 設定をカスタマイズ
+
+`overlays/my-cronjob/kustomization.yaml` を編集:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: my-namespace  # 実行するnamespace
+
+resources:
+  - ../../base-cronjob
+
+namePrefix: my-cronjob-  # リソース名のプレフィックス
+
+configMapGenerator:
+  - name: script-runner-config
+    behavior: replace
+    literals:
+      - GIT_REPO_URL=https://github.com/your-org/your-scripts.git
+      - GIT_BRANCH=main
+      - SCRIPT_COMMAND=python main.py --arg1 value1
+
+patches:
+  # [必須] スケジュールを設定
+  - patch: |-
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: script-runner
+      spec:
+        schedule: "0 9 * * 1-5"  # 平日9時に実行
+```
+
+#### 4. 実行
+
+```bash
+# dry-run で確認
+kubectl apply -k overlays/my-cronjob --dry-run=client -o yaml
+
+# 実際にデプロイ
+kubectl apply -k overlays/my-cronjob
+```
+
+<!-- ```bash
+# スクリプトの実行権限付与，初回のみ
+chmox +x ./del-and-run.sh
+
+# 実行
+./del-and-run.sh overlays/my-job
+``` -->
+
+#### 5. 削除
+
+<!-- ```bash
+kubectl delete -k overlays/my-job
+``` -->
+
+---
 
 ## 設定項目
 
@@ -135,6 +215,8 @@ patches:
   - path: job-patch.yaml
 ```
 
+---
+
 ## 依存関係の管理
 
 スクリプトの依存関係は以下のいずれかで管理できます（優先順位順）:
@@ -174,6 +256,8 @@ your-scripts/
         └── __init__.py
 ```
 
+---
+
 ## トラブルシューティング
 
 ### Jobのログを確認
@@ -189,7 +273,7 @@ kubectl logs <pod-name> -c git-clone -n <namespace>
 kubectl logs <pod-name> -c script-runner -n <namespace>
 ```
 
-### よくある問題
+### よくある問題ほか
 
 #### `fatal: could not read Username for 'https://github.com'`
 
@@ -199,8 +283,18 @@ Private リポジトリに対してトークンが設定されていません。
 
 ### リソース制限の変更
 
-`overlays/my-job/job-patch.yaml`を編集する．
+- **Job**: `overlays/my-job/job-patch.yaml` を編集する．
+- **CronJob**: `overlays/my-cronjob/cronjob-patch.yaml` を編集する．
 
-### jobのpodにラベルを付与
+### podにラベルを付与
 
-`overlays/my-job/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
+`overlays/my-job/kustomization.yaml`または`overlays/my-cronjob/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
+
+### CronJob固有の設定
+
+| 設定項目 | デフォルト | 説明 |
+|--------|------------|------|
+| `schedule` | `"0 0 * * *"` | cron式でスケジュールを指定 |
+| `concurrencyPolicy` | `Forbid` | 同時実行ポリシー (`Forbid` / `Allow` / `Replace`) |
+| `successfulJobsHistoryLimit` | `3` | 成功したJobの履歴保持数 |
+| `failedJobsHistoryLimit` | `3` | 失敗したJobの履歴保持数 |

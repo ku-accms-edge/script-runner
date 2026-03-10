@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: git-script-runner-cronjob-base
+
+# 共通のラベル
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: git-script-runner
+    includeSelectors: false
+
+resources:
+  - cronjob.yaml
+
+# エントリーポイントスクリプト用のConfigMap (Jobと共通のスクリプトを参照)
+configMapGenerator:
+  - name: entrypoint-script
+    files:
+      - ../base/scripts/entrypoint.sh
+    options:
+      disableNameSuffixHash: true
+
+  # デフォルト設定 (オーバーレイで上書き)
+  - name: script-runner-config
+    literals:
+      - GIT_REPO_URL=https://github.com/example/repo.git
+      - GIT_BRANCH=main
+      - GIT_SUBDIR=
+      - SCRIPT_COMMAND=python main.py
+    options:
+      disableNameSuffixHash: true
