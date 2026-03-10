@@ -7,9 +7,9 @@ kind: Kustomization
 # このファイルをコピーして、独自のオーバーレイを作成してください。
 #
 # 使い方:
-#   1. cp -r overlays/example overlays/my-job
-#   2. overlays/my-job/kustomization.yaml を編集
-#   3. kubectl apply -k overlays/my-job または ./run-job.sh
+#   1. cp -r overlays/example overlays/my-single-job
+#   2. overlays/my-single-job/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-single-job または ./del-and-run-single-job.sh
 # =============================================================================
 
 # [必須] デプロイ先のnamespace
@@ -18,6 +18,11 @@ namespace: my-namespace
 # ベースマニフェストを参照
 resources:
   - ../../base/single-job
+# =============================================================================
+# [オプション] Private リポジトリを使用する場合
+# =============================================================================
+# 以下のコメントアウトを解除し、secret.yaml を編集してください
+  # - secret.yaml
 
 # リソース名にプレフィックスを付与 (複数Jobを区別するため)
 namePrefix: myjob-
@@ -45,21 +50,12 @@ configMapGenerator:
       # 例: python main.py --config config.yaml
       - SCRIPT_COMMAND=python main.py
 
-# =============================================================================
-# [オプション] Private リポジトリを使用する場合
-# =============================================================================
-# 以下のコメントアウトを解除し、secret.yaml を編集してください
-
-# resources:
-#   - ../../base/single-job
-#   - secret.yaml
-
 patches:
 # =============================================================================
 # [オプション] リソース制限をカスタマイズする場合
 # =============================================================================
-# 以下のコメントアウトを解除し、job-patch.yaml を編集してください
-  # - path: job-patch.yaml
+# job-patch.yaml を編集してください
+  - path: job-patch.yaml
 
 # =============================================================================
 # [オプション] Jobのpodにラベルを追加する場合
