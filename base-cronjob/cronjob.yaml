@@ -59,6 +59,8 @@ spec:
                       name: git-credentials
                       key: GIT_TOKEN
                       optional: true
+                - name: HOME
+                  value: /tmp
               volumeMounts:
                 - name: workspace
                   mountPath: /workspace
@@ -78,11 +80,10 @@ spec:
                   echo "Branch: ${BRANCH}"
                   echo ""
 
-                  # トークンがある場合はURLに埋め込む (HTTPS認証)
                   if [ -n "${GIT_TOKEN:-}" ]; then
-                      echo "🔐 Using authentication token"
-                      # https://github.com/... → https://token@github.com/...
-                      REPO_URL=$(echo "${REPO_URL}" | sed "s|https://|https://${GIT_TOKEN}@|")
+                      echo "🔐 Using authentication token via HTTP header"
+                      git config --global credential.helper \
+                        '!f() { echo "username=x-access-token"; echo "password='"${GIT_TOKEN}"'"; }; f'
                   fi
 
                   echo "📥 Cloning repository..."
