@@ -68,7 +68,7 @@ kubectl apply -k overlays/my-job
 
 ```bash
 # スクリプトの実行権限付与，初回のみ
-chmox +x ./del-and-run.sh
+chmod +x ./del-and-run.sh
 
 # 実行
 ./del-and-run.sh overlays/my-job
