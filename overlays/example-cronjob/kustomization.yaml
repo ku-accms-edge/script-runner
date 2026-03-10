@@ -17,7 +17,7 @@ namespace: my-namespace
 
 # ベースマニフェストを参照 (CronJob用)
 resources:
-  - ../../base-cronjob
+  - ../../base/cronjob
 
 # リソース名にプレフィックスを付与 (複数CronJobを区別するため)
 namePrefix: myjob-
@@ -51,7 +51,7 @@ configMapGenerator:
 # 以下のコメントアウトを解除し、secret.yaml を編集してください
 
 # resources:
-#   - ../../base-cronjob
+#   - ../../base/cronjob
 #   - secret.yaml
 
 patches:

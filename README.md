@@ -27,12 +27,12 @@ cd git-script-runner
 #### 2. オーバーレイを作成
 
 ```bash
-cp -r overlays/example overlays/my-job
+cp -r overlays/example-single-job overlays/my-single-job
 ```
 
 #### 3. 設定をカスタマイズ
 
-`overlays/my-job/kustomization.yaml` を編集:
+`overlays/my-single-job/kustomization.yaml` を編集:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -41,7 +41,7 @@ kind: Kustomization
 namespace: my-namespace  # 実行するnamespace
 
 resources:
-  - ../../base
+  - ../../base/single-job
 
 namePrefix: my-job-  # リソース名のプレフィックス
 
@@ -58,26 +58,26 @@ configMapGenerator:
 
 ```bash
 # dry-run で確認
-kubectl apply -k overlays/my-job --dry-run=client -o yaml
+kubectl apply -k overlays/my-single-job --dry-run=client -o yaml
 
 # 実際にデプロイ
-kubectl apply -k overlays/my-job
+kubectl apply -k overlays/my-single-job
 ```
 
 または，削除後に実行を行うスクリプトで実行
 
 ```bash
 # スクリプトの実行権限付与，初回のみ
-chmod +x ./del-and-run.sh
+chmod +x ./del-and-run-single-job.sh
 
 # 実行
-./del-and-run.sh overlays/my-job
+./del-and-run-single-job.sh overlays/my-single-job
 ```
 
 #### 5. 削除
 
 ```bash
-kubectl delete -k overlays/my-job
+kubectl delete -k overlays/my-single-job
 ```
 
 ---
@@ -107,7 +107,7 @@ kind: Kustomization
 namespace: my-namespace  # 実行するnamespace
 
 resources:
-  - ../../base-cronjob
+  - ../../base/cronjob
 
 namePrefix: my-cronjob-  # リソース名のプレフィックス
 
@@ -201,7 +201,7 @@ kind: Kustomization
 namespace: my-namespace
 
 resources:
-  - ../../base
+  - ../../base/single-job
   - secret.yaml  # Secretリソースを追加
 
 patches:
@@ -276,12 +276,12 @@ Private リポジトリに対してトークンが設定されていません。
 
 ### リソース制限の変更
 
-- **Job**: `overlays/my-job/job-patch.yaml` を編集する．
+- **Job**: `overlays/my-single-job/job-patch.yaml` を編集する．
 - **CronJob**: `overlays/my-cronjob/cronjob-patch.yaml` を編集する．
 
 ### podにラベルを付与
 
-`overlays/my-job/kustomization.yaml`または`overlays/my-cronjob/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
+`overlays/my-single-job/kustomization.yaml`または`overlays/my-cronjob/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
 
 ### CronJob固有の設定
 

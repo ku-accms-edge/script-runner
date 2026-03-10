@@ -5,7 +5,7 @@
 
 # 環境固有のオーバーレイ
 overlays/*/
-!overlays/example/
+!overlays/example-single-job/
 !overlays/example-cronjob/
 
 # macOS

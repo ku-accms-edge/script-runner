@@ -6,7 +6,7 @@
 #   ./run-job.sh <overlay-path>
 #
 # 例:
-#   ./run-job.sh overlays/my-job           # 実行
+#   ./run-job.sh overlays/my-single-job           # 実行
 # =============================================================================
 set -euo pipefail
 
@@ -17,7 +17,7 @@ if [[ -z "${OVERLAY_PATH}" ]]; then
     echo "Usage: $0 <overlay-path>"
     echo ""
     echo "Examples:"
-    echo "  $0 overlays/my-job"
+    echo "  $0 overlays/my-single-job"
     exit 1
 fi
 

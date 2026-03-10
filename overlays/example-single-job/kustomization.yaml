@@ -17,7 +17,7 @@ namespace: my-namespace
 
 # ベースマニフェストを参照
 resources:
-  - ../../base
+  - ../../base/single-job
 
 # リソース名にプレフィックスを付与 (複数Jobを区別するため)
 namePrefix: myjob-
@@ -51,7 +51,7 @@ configMapGenerator:
 # 以下のコメントアウトを解除し、secret.yaml を編集してください
 
 # resources:
-#   - ../../base
+#   - ../../base/single-job
 #   - secret.yaml
 
 patches:

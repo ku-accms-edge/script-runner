@@ -100,7 +100,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-              - ALL
+                - ALL
 
       # Python スクリプトを実行するメインコンテナ
       containers:
@@ -108,12 +108,12 @@ spec:
           image: python:3.14-slim
           workingDir: /workspace
           env:
-          - name: PIP_TARGET
-            value: "/workspace/.pip-packages"
-          - name: PYTHONPATH
-            value: "/workspace/.pip-packages"
-          - name: PIP_CACHE_DIR
-            value: "/workspace/.cache/pip"
+            - name: PIP_TARGET
+              value: "/workspace/.pip-packages"
+            - name: PYTHONPATH
+              value: "/workspace/.pip-packages"
+            - name: PIP_CACHE_DIR
+              value: "/workspace/.cache/pip"
           envFrom:
             - configMapRef:
                 name: script-runner-config
@@ -135,4 +135,4 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-              - ALL
+                - ALL
