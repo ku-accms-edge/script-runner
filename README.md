@@ -140,19 +140,12 @@ kubectl apply -k overlays/my-cronjob --dry-run=client -o yaml
 kubectl apply -k overlays/my-cronjob
 ```
 
-<!-- ```bash
-# スクリプトの実行権限付与，初回のみ
-chmox +x ./del-and-run.sh
-
-# 実行
-./del-and-run.sh overlays/my-job
-``` -->
 
 #### 5. 削除
 
-<!-- ```bash
-kubectl delete -k overlays/my-job
-``` -->
+```bash
+kubectl delete -k overlays/my-cronjob
+```
 
 ---
 
