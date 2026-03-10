@@ -7,7 +7,7 @@ kind: Kustomization
 # このファイルをコピーして、独自のオーバーレイを作成してください。
 #
 # 使い方:
-#   1. cp -r overlays/example overlays/my-single-job
+#   1. cp -r overlays/example-single-job overlays/my-single-job
 #   2. overlays/my-single-job/kustomization.yaml を編集
 #   3. kubectl apply -k overlays/my-single-job または ./del-and-run-single-job.sh
 # =============================================================================

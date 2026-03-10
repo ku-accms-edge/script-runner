@@ -1,12 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# del-and-run.sh - Jobを削除後に実行するヘルパースクリプト
+# del-and-run-single-job.sh - Jobを削除後に実行するヘルパースクリプト
 # =============================================================================
 # 使い方:
-#   ./run-job.sh <overlay-path>
+#   ./del-and-run-single-job.sh <overlay-path>
 #
 # 例:
-#   ./run-job.sh overlays/my-single-job           # 実行
+#   ./del-and-run-single-job.sh overlays/my-single-job           # 実行
 # =============================================================================
 set -euo pipefail
 
