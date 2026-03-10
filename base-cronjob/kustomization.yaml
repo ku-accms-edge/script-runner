@@ -18,7 +18,7 @@ resources:
 configMapGenerator:
   - name: entrypoint-script
     files:
-      - ../base/scripts/entrypoint.sh
+      - scripts/entrypoint.sh
     options:
       disableNameSuffixHash: true
 
