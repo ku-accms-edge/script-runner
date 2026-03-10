@@ -6,6 +6,7 @@
 # 環境固有のオーバーレイ
 overlays/*/
 !overlays/example/
+!overlays/example-cronjob/
 
 # macOS
 .DS_Store

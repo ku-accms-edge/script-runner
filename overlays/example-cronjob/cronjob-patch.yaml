@@ -1,0 +1,59 @@
+# =============================================================================
+# CronJob カスタマイズ用パッチ
+# =============================================================================
+# リソース制限やその他のCronJob設定をカスタマイズする場合に使用します。
+#
+# 使い方:
+#   kustomization.yaml に以下を追加:
+#   patches:
+#     - path: cronjob-patch.yaml
+# =============================================================================
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: script-runner
+spec:
+  # 同時実行ポリシー (Forbid / Allow / Replace)
+  concurrencyPolicy: Forbid
+
+  # 成功/失敗したJobの履歴保持数
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      # リトライ回数
+      backoffLimit: 2
+
+      # タイムアウト (10分)
+      activeDeadlineSeconds: 600
+
+      template:
+        spec:
+          # initContainer のリソース制限
+          initContainers:
+            - name: git-clone
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "200m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "1000m"
+
+          # mainContainer のリソース制限
+          containers:
+            - name: script-runner
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "200m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "2000m"
+
+              # 追加の環境変数
+              env:
+                - name: PYTHONUNBUFFERED
+                  value: "1"
