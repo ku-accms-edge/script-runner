@@ -149,7 +149,7 @@ kubectl delete -k overlays/my-cronjob
 
 ---
 
-### Deployment + Service (常駐サービス) の場合
+### Deployment (常駐サービス) の場合
 #### 1. リポジトリをクローン
 
 ```bash
@@ -175,6 +175,7 @@ namespace: my-namespace  # 実行するnamespace
 
 resources:
   - ../../base/deployment
+  - service.yaml  # Service が不要な場合はこの行を削除
 
 namePrefix: my-app-  # リソース名のプレフィックス
 
@@ -187,7 +188,9 @@ configMapGenerator:
       - SCRIPT_COMMAND=python -m uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-デフォルトではコンテナのポート `8080` が公開され、Service はポート `80` でアクセスを受け付けます。ポート番号を変更する場合は `deployment-patch.yaml` と `service-patch.yaml` を編集してください（詳細は「ポート番号の変更」セクションを参照）。
+Service はオプションです。不要な場合は `kustomization.yaml` の resources から `service.yaml` を削除してください。
+
+デフォルトではコンテナのポート `8080` が公開され、Service はポート `80` でアクセスを受け付けます。ポート番号を変更する場合は `deployment-patch.yaml` と `service.yaml` を編集してください（詳細は「ポート番号の変更」セクションを参照）。
 
 #### 4. 実行
 
@@ -358,19 +361,18 @@ Private リポジトリに対してトークンが設定されていません。
               protocol: TCP
 ```
 
-`service-patch.yaml` で Service ポートを変更:
+`service.yaml` で Service ポートを変更:
 
 ```yaml
 spec:
   ports:
-    - $patch: replace
     - name: http
       port: 3000       # 外部に公開するポート
       targetPort: http  # コンテナの named port に自動追従
       protocol: TCP
 ```
 
-`$patch: replace` により base のポート定義が完全に置き換えられるため、意図しないポートが残ることはありません。
+コンテナポートは `deployment-patch.yaml` 内の `$patch: replace` により base の定義が完全に置き換えられるため、意図しないポートが残ることはありません。Service はオーバーレイ側で直接定義しているため、そのまま編集するだけで変更できます。
 
 #### MetalLB による外部IP割り当て
 

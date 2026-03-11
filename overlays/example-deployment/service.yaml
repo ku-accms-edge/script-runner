@@ -1,7 +1,7 @@
 # =============================================================================
-# Service カスタマイズ用パッチ
+# Service リソース
 # =============================================================================
-# ポート番号やその他のService設定をカスタマイズする場合に使用します。
+# Service が不要な場合は、kustomization.yaml の resources から service.yaml を除外してください。
 #
 # containerPort を変更する場合は deployment-patch.yaml も合わせて変更してください。
 # =============================================================================
@@ -10,10 +10,16 @@ apiVersion: v1
 kind: Service
 metadata:
   name: script-runner
+  labels:
+    app.kubernetes.io/name: script-runner
+    app.kubernetes.io/component: deployment
 spec:
+  type: ClusterIP
   ports:
-    - $patch: replace
     - name: http
       port: 80
       targetPort: http
       protocol: TCP
+  selector:
+    app.kubernetes.io/name: script-runner
+    app.kubernetes.io/component: deployment
