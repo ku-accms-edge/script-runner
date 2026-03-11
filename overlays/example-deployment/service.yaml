@@ -1,0 +1,25 @@
+# =============================================================================
+# Service リソース
+# =============================================================================
+# Service が必要な場合は、kustomization.yaml の resources から service.yaml を追加してください。
+#
+# containerPort を変更する場合は deployment-patch.yaml も合わせて変更してください。
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: script-runner
+  labels:
+    app.kubernetes.io/name: script-runner
+    app.kubernetes.io/component: deployment
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: script-runner
+    app.kubernetes.io/component: deployment
