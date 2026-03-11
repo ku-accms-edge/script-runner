@@ -364,7 +364,6 @@ Private リポジトリに対してトークンが設定されていません。
 
 ```yaml
           ports:
-            - $patch: replace
             - name: http
               containerPort: 3000  # アプリケーションのポートに合わせて変更
               protocol: TCP

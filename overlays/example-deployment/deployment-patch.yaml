@@ -40,7 +40,7 @@ spec:
           # Service側のポートも合わせて変更する場合は service.yaml も編集してください
           # ports:
           #   - name: http
-          #     containerPort: 8080
+          #     containerPort: 3000
           #     protocol: TCP
 
           # 追加の環境変数
