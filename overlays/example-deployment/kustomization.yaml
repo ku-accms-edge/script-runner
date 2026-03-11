@@ -1,0 +1,92 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Deployment + Service サンプルオーバーレイ
+# =============================================================================
+# このファイルをコピーして、独自のオーバーレイを作成してください。
+#
+# 使い方:
+#   1. cp -r overlays/example-deployment overlays/my-deployment
+#   2. overlays/my-deployment/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-deployment
+# =============================================================================
+
+# [必須] デプロイ先のnamespace
+namespace: my-namespace
+
+# ベースマニフェストを参照 (Deployment用)
+resources:
+  - ../../base/deployment
+# =============================================================================
+# [オプション] Private リポジトリを使用する場合
+# =============================================================================
+# 以下のコメントアウトを解除し、secret.yaml を編集してください
+  # - secret.yaml
+
+# リソース名にプレフィックスを付与 (複数Deploymentを区別するため)
+namePrefix: myapp-
+
+# =============================================================================
+# [必須] スクリプト実行の設定
+# =============================================================================
+# 以下の設定をあなたの環境に合わせて変更してください
+
+configMapGenerator:
+  - name: script-runner-config
+    behavior: replace
+    literals:
+      # [必須] GitリポジトリのURL
+      - GIT_REPO_URL=https://github.com/example/your-scripts.git
+
+      # [オプション] クローンするブランチ (デフォルト: main)
+      - GIT_BRANCH=main
+
+      # [オプション] リポジトリ内のサブディレクトリ
+      # スクリプトがリポジトリのルートにない場合に指定
+      - GIT_SUBDIR=
+
+      # [必須] 実行するコマンド
+      # 例: python -m uvicorn main:app --host 0.0.0.0 --port 8080
+      - SCRIPT_COMMAND=python main.py
+
+patches:
+# =============================================================================
+# [オプション] リソース制限をカスタマイズする場合
+# =============================================================================
+# deployment-patch.yaml を編集してください
+  - path: deployment-patch.yaml
+  - path: service-patch.yaml
+
+# =============================================================================
+# [オプション] Deploymentのpodにラベルを追加する場合
+# =============================================================================
+# 以下のコメントアウトを解除し、ラベル情報を編集してください
+  # - patch: |-
+  #     apiVersion: apps/v1
+  #     kind: Deployment
+  #     metadata:
+  #       name: script-runner
+  #     spec:
+  #       template:
+  #         metadata:
+  #           labels:
+  #             label-key: "label-value"
+
+# =============================================================================
+# [オプション] MetalLB を使用して外部IPを割り当てる場合
+# 
+# !!!!!!!!!! 未検証 !!!!!!!!!!
+# 
+# =============================================================================
+# 以下のコメントアウトを解除し、IPアドレスやアドレスプールを設定してください
+# ServiceのタイプがLoadBalancerに変更されます
+  # - patch: |-
+  #     apiVersion: v1
+  #     kind: Service
+  #     metadata:
+  #       name: script-runner
+  #       annotations:
+  #         metallb.io/loadBalancerIPs: 192.168.1.50,2001:db8:abcd:10::50 
+  #     spec:
+  #       type: LoadBalancer

@@ -1,0 +1,50 @@
+# =============================================================================
+# Deployment カスタマイズ用パッチ
+# =============================================================================
+# リソース制限やその他のDeployment設定をカスタマイズする場合に使用します。
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: script-runner
+spec:
+  # レプリカ数
+  # replicas: 2
+
+  template:
+    spec:
+      # initContainer のリソース制限
+      initContainers:
+        - name: git-clone
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+
+      # mainContainer のリソース制限
+      containers:
+        - name: script-runner
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+
+          # コンテナのポート番号の変更
+          # Service側のポートも合わせて変更する場合は service-patch.yaml も編集してください
+          # ports:
+          #   - $patch: replace
+          #   - name: http
+          #     containerPort: 8080
+          #     protocol: TCP
+
+          # 追加の環境変数
+          # env:
+          #   - name: PYTHONUNBUFFERED
+          #     value: "1"

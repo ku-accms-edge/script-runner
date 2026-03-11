@@ -2,13 +2,13 @@
 
 Gitリポジトリから直接Pythonスクリプトを実行するためのKubernetesマニフェスト集です。
 
-コンテナイメージをビルドすることなく、環境変数でGitリポジトリのURLと実行コマンドを指定するだけで、任意のPythonスクリプトをKubernetes Job または CronJob として実行できます。
+コンテナイメージをビルドすることなく、環境変数でGitリポジトリのURLと実行コマンドを指定するだけで、任意のPythonスクリプトをKubernetes Job、CronJob、または Deployment + Service として実行できます。
 
 ## 特徴
 
 - **ビルド不要**: 公式のPythonイメージとalpine/gitイメージを使用
 - **柔軟な設定**: Kustomizeで環境ごとの設定を簡単に管理
-- **Job / CronJob 対応**: 一度きりの実行にも、定期実行にも対応
+- **Job / CronJob / Deployment 対応**: 一度きりの実行、定期実行、常駐サービスに対応
 - **Private リポジトリ対応**: GitHub Personal Access Token による認証をサポート
 - **依存関係の自動インストール**: `requirements.txt` と `pyproject.toml` の両方に対応
 
@@ -149,6 +149,64 @@ kubectl delete -k overlays/my-cronjob
 
 ---
 
+### Deployment + Service (常駐サービス) の場合
+#### 1. リポジトリをクローン
+
+```bash
+git clone https://github.com/XXX/git-script-runner.git
+cd git-script-runner
+```
+
+#### 2. オーバーレイを作成
+
+```bash
+cp -r overlays/example-deployment overlays/my-deployment
+```
+
+#### 3. 設定をカスタマイズ
+
+`overlays/my-deployment/kustomization.yaml` を編集:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: my-namespace  # 実行するnamespace
+
+resources:
+  - ../../base/deployment
+
+namePrefix: my-app-  # リソース名のプレフィックス
+
+configMapGenerator:
+  - name: script-runner-config
+    behavior: replace
+    literals:
+      - GIT_REPO_URL=https://github.com/your-org/your-scripts.git
+      - GIT_BRANCH=main
+      - SCRIPT_COMMAND=python -m uvicorn main:app --host 0.0.0.0 --port 8080
+```
+
+デフォルトではコンテナのポート `8080` が公開され、Service はポート `80` でアクセスを受け付けます。ポート番号を変更する場合は `deployment-patch.yaml` と `service-patch.yaml` を編集してください（詳細は「ポート番号の変更」セクションを参照）。
+
+#### 4. 実行
+
+```bash
+# dry-run で確認
+kubectl apply -k overlays/my-deployment --dry-run=client -o yaml
+
+# 実際にデプロイ
+kubectl apply -k overlays/my-deployment
+```
+
+#### 5. 削除
+
+```bash
+kubectl delete -k overlays/my-deployment
+```
+
+---
+
 ## 設定項目
 
 ### 環境変数 (ConfigMap)
@@ -278,10 +336,45 @@ Private リポジトリに対してトークンが設定されていません。
 
 - **Job**: `overlays/my-single-job/job-patch.yaml` を編集する．
 - **CronJob**: `overlays/my-cronjob/cronjob-patch.yaml` を編集する．
+- **Deployment**: `overlays/my-deployment/deployment-patch.yaml` を編集する．
 
 ### podにラベルを付与
 
-`overlays/my-single-job/kustomization.yaml`または`overlays/my-cronjob/kustomization.yaml`内の「オプション Jobのpodにラベルを追加する場合」の部分を編集してください．
+`overlays/my-single-job/kustomization.yaml`、`overlays/my-cronjob/kustomization.yaml`、または`overlays/my-deployment/kustomization.yaml`内の「オプション podにラベルを追加する場合」の部分を編集してください．
+
+### Deployment固有の設定
+
+#### ポート番号の変更
+
+デフォルトではコンテナポート `8080`、Service ポート `80` が設定されています。変更する場合は以下の2ファイルを編集してください。
+
+`deployment-patch.yaml` でコンテナポートを変更:
+
+```yaml
+          ports:
+            - $patch: replace
+            - name: http
+              containerPort: 3000  # アプリケーションのポートに合わせて変更
+              protocol: TCP
+```
+
+`service-patch.yaml` で Service ポートを変更:
+
+```yaml
+spec:
+  ports:
+    - $patch: replace
+    - name: http
+      port: 3000       # 外部に公開するポート
+      targetPort: http  # コンテナの named port に自動追従
+      protocol: TCP
+```
+
+`$patch: replace` により base のポート定義が完全に置き換えられるため、意図しないポートが残ることはありません。
+
+#### MetalLB による外部IP割り当て
+
+`kustomization.yaml` 内の MetalLB パッチのコメントアウトを解除し、アドレスプールやIPアドレスを設定してください。Service タイプが `LoadBalancer` に変更されます。
 
 ### CronJob固有の設定
 
