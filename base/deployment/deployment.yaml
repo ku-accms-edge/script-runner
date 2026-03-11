@@ -16,7 +16,6 @@ spec:
       labels:
         app.kubernetes.io/name: script-runner
         app.kubernetes.io/component: deployment
-        serviceSelectorLabel: my-label
     spec:
       securityContext:
         runAsNonRoot: true
