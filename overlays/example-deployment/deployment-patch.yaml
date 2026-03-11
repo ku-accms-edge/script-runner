@@ -36,10 +36,9 @@ spec:
               memory: "512Mi"
               cpu: "1000m"
 
-          # コンテナのポート番号の変更
-          # Service側のポートも合わせて変更する場合は service-patch.yaml も編集してください
+          # コンテナのポート番号の設定
+          # Service側のポートも合わせて変更する場合は service.yaml も編集してください
           # ports:
-          #   - $patch: replace
           #   - name: http
           #     containerPort: 8080
           #     protocol: TCP

@@ -175,7 +175,7 @@ namespace: my-namespace  # 実行するnamespace
 
 resources:
   - ../../base/deployment
-  - service.yaml  # Service が不要な場合はこの行を削除
+  - service.yaml  # Service が必要な場合はこの行を追加
 
 namePrefix: my-app-  # リソース名のプレフィックス
 
@@ -188,9 +188,9 @@ configMapGenerator:
       - SCRIPT_COMMAND=python -m uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-Service はオプションです。不要な場合は `kustomization.yaml` の resources から `service.yaml` を削除してください。
+Service はオプションです。必要な場合は `kustomization.yaml` の resources から `service.yaml` を追加してください。
 
-デフォルトではコンテナのポート `8080` が公開され、Service はポート `80` でアクセスを受け付けます。ポート番号を変更する場合は `deployment-patch.yaml` と `service.yaml` を編集してください（詳細は「ポート番号の変更」セクションを参照）。
+ポート番号を変更する場合は `deployment-patch.yaml` と `service.yaml` を編集してください（詳細は「ポート番号の変更」セクションを参照）。
 
 #### 4. 実行
 
@@ -345,11 +345,20 @@ Private リポジトリに対してトークンが設定されていません。
 
 `overlays/my-single-job/kustomization.yaml`、`overlays/my-cronjob/kustomization.yaml`、または`overlays/my-deployment/kustomization.yaml`内の「オプション podにラベルを追加する場合」の部分を編集してください．
 
+### CronJob固有の設定
+
+| 設定項目 | デフォルト | 説明 |
+|--------|------------|------|
+| `schedule` | `"0 0 * * *"` | cron式でスケジュールを指定 |
+| `concurrencyPolicy` | `Forbid` | 同時実行ポリシー (`Forbid` / `Allow` / `Replace`) |
+| `successfulJobsHistoryLimit` | `3` | 成功したJobの履歴保持数 |
+| `failedJobsHistoryLimit` | `3` | 失敗したJobの履歴保持数 |
+
 ### Deployment固有の設定
 
 #### ポート番号の変更
 
-デフォルトではコンテナポート `8080`、Service ポート `80` が設定されています。変更する場合は以下の2ファイルを編集してください。
+変更する場合は以下の2ファイルを編集してください。
 
 `deployment-patch.yaml` でコンテナポートを変更:
 
@@ -367,22 +376,12 @@ Private リポジトリに対してトークンが設定されていません。
 spec:
   ports:
     - name: http
-      port: 3000       # 外部に公開するポート
-      targetPort: http  # コンテナの named port に自動追従
+      port: 80          # 外部に公開するポート
+      targetPort: 3000  # deployment-patch.yaml の containerPort と合わせる
       protocol: TCP
 ```
 
-コンテナポートは `deployment-patch.yaml` 内の `$patch: replace` により base の定義が完全に置き換えられるため、意図しないポートが残ることはありません。Service はオーバーレイ側で直接定義しているため、そのまま編集するだけで変更できます。
 
-#### MetalLB による外部IP割り当て
+<!-- #### MetalLB による外部IP割り当て
 
-`kustomization.yaml` 内の MetalLB パッチのコメントアウトを解除し、アドレスプールやIPアドレスを設定してください。Service タイプが `LoadBalancer` に変更されます。
-
-### CronJob固有の設定
-
-| 設定項目 | デフォルト | 説明 |
-|--------|------------|------|
-| `schedule` | `"0 0 * * *"` | cron式でスケジュールを指定 |
-| `concurrencyPolicy` | `Forbid` | 同時実行ポリシー (`Forbid` / `Allow` / `Replace`) |
-| `successfulJobsHistoryLimit` | `3` | 成功したJobの履歴保持数 |
-| `failedJobsHistoryLimit` | `3` | 失敗したJobの履歴保持数 |
+`kustomization.yaml` 内の MetalLB パッチのコメントアウトを解除し、アドレスプールやIPアドレスを設定してください。Service タイプが `LoadBalancer` に変更されます。 -->
