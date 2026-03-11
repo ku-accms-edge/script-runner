@@ -185,7 +185,7 @@ configMapGenerator:
     literals:
       - GIT_REPO_URL=https://github.com/your-org/your-scripts.git
       - GIT_BRANCH=main
-      - SCRIPT_COMMAND=python -m uvicorn main:app --host 0.0.0.0 --port 8080
+      - SCRIPT_COMMAND=python -m uvicorn main:app --host 0.0.0.0 --port 3000
 ```
 
 Service はオプションです。必要な場合は `kustomization.yaml` の resources から `service.yaml` を追加してください。
