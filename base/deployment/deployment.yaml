@@ -77,7 +77,7 @@ spec:
               echo ""
 
               if [ -n "${GIT_TOKEN:-}" ]; then
-                  echo "🔐 Using authentication token via HTTP header"
+                  echo "🔐 Using authentication token via git credential helper (HTTPS basic auth)"
                   git config --global credential.helper \
                     '!f() { echo "username=x-access-token"; echo "password='"${GIT_TOKEN}"'"; }; f'
               fi
