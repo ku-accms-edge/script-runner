@@ -67,5 +67,5 @@ echo "🚀 Executing command: ${SCRIPT_COMMAND}"
 echo "=========================================="
 echo ""
 
-# コマンドを実行 (シェル展開を有効にするためevalを使用)
+# コマンドを実行
 exec bash -c "${SCRIPT_COMMAND}"
