@@ -36,7 +36,7 @@ configMapGenerator:
   - name: script-runner-config
     behavior: replace
     literals:
-      # [必須] GitリポジトリのURL
+      # [オプション] GitリポジトリのURL
       - GIT_REPO_URL=https://github.com/example/your-scripts.git
 
       # [オプション] クローンするブランチ (デフォルト: main)
@@ -55,6 +55,7 @@ patches:
 # [必須] CronJob スケジュールの設定
 # =============================================================================
 # cron式でスケジュールを指定してください
+# デフォルトでは，タイムゾーンはAsia/Tokyoです
   - patch: |-
       apiVersion: batch/v1
       kind: CronJob

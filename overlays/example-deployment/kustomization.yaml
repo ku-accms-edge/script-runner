@@ -44,7 +44,7 @@ configMapGenerator:
   - name: script-runner-config
     behavior: replace
     literals:
-      # [必須] GitリポジトリのURL
+      # [オプション] GitリポジトリのURL
       - GIT_REPO_URL=https://github.com/example/your-scripts.git
 
       # [オプション] クローンするブランチ (デフォルト: main)
