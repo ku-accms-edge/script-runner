@@ -14,6 +14,8 @@ set -euo pipefail
 #   PIP_INDEX_URL    - カスタムPyPIインデックス (オプション)
 # =============================================================================
 
+export PATH="/workspace/.pip-packages/bin:$PATH"
+
 WORK_DIR="/workspace"
 SCRIPT_DIR="${WORK_DIR}"
 
@@ -37,19 +39,23 @@ cd "${SCRIPT_DIR}"
 # =============================================================================
 echo "📦 Checking for dependencies..."
 
-# pipのアップグレード
-pip install --upgrade pip --quiet --root-user-action=ignore
+if command -v pip &> /dev/null; then
+    # pipのアップグレード
+    pip install --upgrade pip --quiet --root-user-action=ignore
 
-if [[ -f "pyproject.toml" ]]; then
-    echo "Found pyproject.toml - installing project with dependencies..."
-    pip install . --quiet --root-user-action=ignore
-    echo "✅ Dependencies installed from pyproject.toml"
-elif [[ -f "requirements.txt" ]]; then
-    echo "Found requirements.txt - installing dependencies..."
-    pip install -r requirements.txt --quiet --root-user-action=ignore
-    echo "✅ Dependencies installed from requirements.txt"
+    if [[ -f "pyproject.toml" ]]; then
+        echo "Found pyproject.toml - installing project with dependencies..."
+        pip install . --quiet --root-user-action=ignore
+        echo "✅ Dependencies installed from pyproject.toml"
+    elif [[ -f "requirements.txt" ]]; then
+        echo "Found requirements.txt - installing dependencies..."
+        pip install -r requirements.txt --quiet --root-user-action=ignore
+        echo "✅ Dependencies installed from requirements.txt"
+    else
+        echo "ℹ️  No pyproject.toml or requirements.txt found - skipping dependency installation"
+    fi
 else
-    echo "ℹ️  No pyproject.toml or requirements.txt found - skipping dependency installation"
+    echo "ℹ️  pip not found - skipping dependency installation"
 fi
 
 echo ""

@@ -1,7 +1,7 @@
 # =============================================================================
 # Deployment カスタマイズ用パッチ
 # =============================================================================
-# リソース制限やその他のDeployment設定をカスタマイズする場合に使用します。
+# コンテナイメージやリソース制限，その他のDeployment設定をカスタマイズする場合に使用します。
 # =============================================================================
 
 apiVersion: apps/v1
@@ -14,7 +14,7 @@ spec:
 
   template:
     spec:
-      # initContainer のリソース制限
+      # initContainer のリソース
       initContainers:
         - name: git-clone
           resources:
@@ -25,9 +25,10 @@ spec:
               memory: "256Mi"
               cpu: "500m"
 
-      # mainContainer のリソース制限
+      # mainContainer のリソース
       containers:
         - name: script-runner
+          # image: ubuntu:24.04
           resources:
             requests:
               memory: "128Mi"
