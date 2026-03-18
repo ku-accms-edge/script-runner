@@ -11,6 +11,7 @@ Gitリポジトリから直接Pythonスクリプトを実行するためのKuber
 - **Job / CronJob / Deployment 対応**: 一度きりの実行、定期実行、常駐サービスに対応
 - **Private リポジトリ対応**: GitHub Personal Access Token による認証をサポート
 - **依存関係の自動インストール**: `requirements.txt` と `pyproject.toml` の両方に対応
+- **カスタムコンテナ対応**: Git cloneなし・pipなしのイメージでも動作可能
 
 ---
 
@@ -216,7 +217,7 @@ kubectl delete -k overlays/my-deployment
 
 | 変数名 | 必須 | デフォルト | 説明 |
 |--------|------|------------|------|
-| `GIT_REPO_URL` | ✅ | - | GitリポジトリのURL |
+| `GIT_REPO_URL` | - | - | GitリポジトリのURL (未指定の場合、git cloneをスキップ) |
 | `GIT_BRANCH` | - | `main` | クローンするブランチ |
 | `GIT_SUBDIR` | - | - | リポジトリ内のサブディレクトリ (スクリプトがサブディレクトリにある場合) |
 | `SCRIPT_COMMAND` | ✅ | - | 実行するコマンド |
@@ -295,9 +296,12 @@ pandas>=2.0.0
 ```
 
 entrypoint スクリプトは以下の順序でチェックします:
-1. `pyproject.toml` があれば `pip install .`
-2. なければ `requirements.txt` があれば `pip install -r requirements.txt`
-3. どちらもなければ依存関係のインストールをスキップ
+1. `pip` コマンドが存在しない場合、依存関係のインストールをスキップ
+2. `pyproject.toml` があれば `pip install .`
+3. なければ `requirements.txt` があれば `pip install -r requirements.txt`
+4. どちらもなければ依存関係のインストールをスキップ
+
+> **Note:** runnerコンテナのイメージをカスタムする場合、`pip` コマンドが存在しないイメージでも正常に動作します。
 
 ## サンプルスクリプト構成
 

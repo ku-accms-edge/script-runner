@@ -47,6 +47,7 @@ spec:
                     configMapKeyRef:
                       name: script-runner-config
                       key: GIT_REPO_URL
+                      optional: true
                 - name: GIT_BRANCH
                   valueFrom:
                     configMapKeyRef:
@@ -70,8 +71,16 @@ spec:
                 - |
                   set -e
 
+                  REPO_URL="${GIT_REPO_URL:-}"
+
+                  if [ -z "${REPO_URL}" ]; then
+                      echo "=========================================="
+                      echo "Git Clone - Skipped (GIT_REPO_URL is not set)"
+                      echo "=========================================="
+                      exit 0
+                  fi
+
                   BRANCH="${GIT_BRANCH:-main}"
-                  REPO_URL="${GIT_REPO_URL}"
 
                   echo "=========================================="
                   echo "Git Clone - Starting"
