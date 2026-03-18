@@ -608,6 +608,9 @@ main() {
       echo ""
       echo "  ${BOLD}ログの確認:${RESET}"
       echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} job/${CFG_NAME_PREFIX}-script-runner${RESET}"
+      echo ""
+      echo "  ${BOLD}削除:${RESET}"
+      echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       ;;
     cronjob)
       echo "     ${CYAN}kubectl apply -k overlays/${CFG_OVERLAY_NAME}${RESET}"
@@ -617,6 +620,9 @@ main() {
       echo ""
       echo "  ${BOLD}手動で即時実行:${RESET}"
       echo "     ${CYAN}kubectl create job --from=cronjob/${CFG_NAME_PREFIX}-script-runner manual-run -n ${CFG_NAMESPACE}${RESET}"
+      echo ""
+      echo "  ${BOLD}削除:${RESET}"
+      echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       ;;
     deployment)
       echo "     ${CYAN}kubectl apply -k overlays/${CFG_OVERLAY_NAME}${RESET}"
@@ -626,6 +632,9 @@ main() {
       echo ""
       echo "  ${BOLD}ログの確認:${RESET}"
       echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/name=script-runner --tail=50${RESET}"
+      echo ""
+      echo "  ${BOLD}削除:${RESET}"
+      echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       ;;
   esac
 
