@@ -6,6 +6,7 @@ metadata:
     app.kubernetes.io/name: script-runner
     app.kubernetes.io/component: cronjob
 spec:
+  timeZone: "Asia/Tokyo"
   schedule: "0 0 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
