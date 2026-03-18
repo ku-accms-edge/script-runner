@@ -79,21 +79,3 @@ patches:
   #         metadata:
   #           labels:
   #             label-key: "label-value"
-
-# =============================================================================
-# [オプション] MetalLB を使用して外部IPを割り当てる場合
-# 
-# !!!!!!!!!! 未検証 !!!!!!!!!!
-# 
-# =============================================================================
-# 以下のコメントアウトを解除し、IPアドレスやアドレスプールを設定してください
-# ServiceのタイプがLoadBalancerに変更されます
-  # - patch: |-
-  #     apiVersion: v1
-  #     kind: Service
-  #     metadata:
-  #       name: script-runner
-  #       annotations:
-  #         metallb.io/loadBalancerIPs: 192.168.1.50,2001:db8:abcd:10::50 
-  #     spec:
-  #       type: LoadBalancer

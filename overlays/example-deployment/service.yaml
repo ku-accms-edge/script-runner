@@ -13,8 +13,15 @@ metadata:
   labels:
     app.kubernetes.io/name: script-runner
     app.kubernetes.io/component: deployment
+    # テナント名
+    edge.kudpc.kyoto-u.ac.jp/egress-policy: "your-tenant-name"
+  annotations:
+    # 割当IPアドレス
+    io.cilium/lb-ipam-ips: "192.0.2.1"
+    # namespace名
+    io.cilium/lb-ipam-sharing-key: "your-namespace-name"
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
     - name: http
       port: 80
@@ -23,3 +30,5 @@ spec:
   selector:
     app.kubernetes.io/name: script-runner
     app.kubernetes.io/component: deployment
+  loadBalancerSourceRanges:
+    - 0.0.0.0/0
