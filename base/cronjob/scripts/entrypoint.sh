@@ -14,6 +14,8 @@ set -euo pipefail
 #   PIP_INDEX_URL    - カスタムPyPIインデックス (オプション)
 # =============================================================================
 
+export PATH="/workspace/.pip-packages/bin:$PATH"
+
 WORK_DIR="/workspace"
 SCRIPT_DIR="${WORK_DIR}"
 
