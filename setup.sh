@@ -623,6 +623,18 @@ main() {
       echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       ;;
     deployment)
+      if [[ "$CFG_USE_SERVICE" == "y" ]]; then
+        echo ""
+        echo "  ${YELLOW}${BOLD}※ デプロイ前に service.yaml を編集してください:${RESET}"
+        echo "     ${DIM}vim overlays/${CFG_OVERLAY_NAME}/service.yaml${RESET}"
+        echo ""
+        echo "     以下の項目をあなたの環境に合わせて変更してください:"
+        echo "       - ${BOLD}edge.kudpc.kyoto-u.ac.jp/egress-policy${RESET}: テナント名"
+        echo "       - ${BOLD}io.cilium/lb-ipam-ips${RESET}: 割当IPアドレス"
+        echo "       - ${BOLD}io.cilium/lb-ipam-sharing-key${RESET}: namespace名"
+        echo "       - ${BOLD}loadBalancerSourceRanges${RESET}: アクセス許可するCIDR"
+        echo ""
+      fi
       echo "     ${CYAN}kubectl apply -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       echo ""
       echo "  ${BOLD}状態の確認:${RESET}"
