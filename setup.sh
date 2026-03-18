@@ -510,8 +510,7 @@ main() {
   # サンプルオーバーレイをコピー
   cp -r "$example_dir" "$output_dir"
 
-  # secret.yaml.example は不要なので削除
-  rm -f "${output_dir}/secret.yaml.example"
+  mv "${output_dir}/secret.yaml.example" "${output_dir}/secret.yaml"
 
   # --- kustomization.yaml の共通設定を書き換え ---
   sed -i "s|^namespace: .*|namespace: ${CFG_NAMESPACE}|" "$kustomization"
@@ -527,7 +526,6 @@ main() {
     # --- プライベートリポジトリ ---
     if [[ "$CFG_PRIVATE_REPO" == "y" ]]; then
       sed -i 's|^  # - secret.yaml|  - secret.yaml|' "$kustomization"
-      cp "${example_dir}/secret.yaml.example" "${output_dir}/secret.yaml"
     fi
   else
     # Gitリポジトリ未指定: GIT_REPO_URLを空に設定 (git cloneがスキップされる)
@@ -558,9 +556,9 @@ main() {
       sed -i "s|containerPort: .*|containerPort: ${CFG_CONTAINER_PORT}|" "$patch_file"
       sed -i "s|^\([[:space:]]*\)port: .*|\1port: ${CFG_SERVICE_PORT}|" "$service_file"
       sed -i "s|targetPort: .*|targetPort: ${CFG_CONTAINER_PORT}|" "$service_file"
-    else
-      # Service を使わない場合は service.yaml を削除
-      rm -f "${output_dir}/service.yaml"
+    # else
+    #   # Service を使わない場合は service.yaml を削除
+    #   rm -f "${output_dir}/service.yaml"
     fi
   fi
 
@@ -618,7 +616,7 @@ main() {
       echo "  ${BOLD}状態の確認:${RESET}"
       echo "     ${CYAN}kubectl get cronjob -n ${CFG_NAMESPACE}${RESET}"
       echo ""
-      echo "  ${BOLD}手動で即時実行:${RESET}"
+      echo "  ${BOLD}デプロイ後、手動で即時実行:${RESET}"
       echo "     ${CYAN}kubectl create job --from=cronjob/${CFG_NAME_PREFIX}-script-runner manual-run -n ${CFG_NAMESPACE}${RESET}"
       echo ""
       echo "  ${BOLD}削除:${RESET}"
