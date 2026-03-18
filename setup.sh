@@ -319,45 +319,53 @@ main() {
   success "プレフィックス: ${CFG_NAME_PREFIX}"
 
   # =========================================================================
-  # Step 3: Gitリポジトリ設定
+  # Step 3: Gitリポジトリ設定 (任意)
   # =========================================================================
   section "Step 3/5: Gitリポジトリの設定"
 
-  info "実行したいPythonスクリプトが格納されているGitリポジトリの情報を"
-  info "入力してください。"
+  info "Gitリポジトリを指定すると、起動時にスクリプトを自動でクローンします。"
+  info "指定しない場合は、クローンはスキップされます。"
 
-  # --- Git URL ---
-  while true; do
-    prompt "GitリポジトリのURL (https://...*.git)"
-    CFG_GIT_URL="$REPLY"
-    validate_git_url "$CFG_GIT_URL" && break
-  done
-
-  success "リポジトリ: ${CFG_GIT_URL}"
-
-  # --- Git Branch ---
-  prompt "ブランチ名" "main"
-  CFG_GIT_BRANCH="$REPLY"
-  success "ブランチ: ${CFG_GIT_BRANCH}"
-
-  # --- Git Subdir ---
-  info "スクリプトがリポジトリのサブディレクトリにある場合は指定してください。"
-  info "ルート直下にある場合は空のままEnterを押してください。"
-
-  prompt "サブディレクトリ (例: src/scripts)" ""
-  CFG_GIT_SUBDIR="$REPLY"
-
-  if [[ -n "$CFG_GIT_SUBDIR" ]]; then
-    success "サブディレクトリ: ${CFG_GIT_SUBDIR}"
-  else
-    success "サブディレクトリ: (なし - ルート直下)"
-  fi
-
-  # --- Private repo ---
+  CFG_GIT_URL=""
+  CFG_GIT_BRANCH="main"
+  CFG_GIT_SUBDIR=""
   CFG_PRIVATE_REPO="n"
-  if confirm "プライベートリポジトリですか？ (認証トークンが必要)"; then
-    CFG_PRIVATE_REPO="y"
-    warn "secret.yaml が生成されます。デプロイ前にトークンを設定してください。"
+
+  if confirm "Gitリポジトリを指定しますか？"; then
+    # --- Git URL ---
+    while true; do
+      prompt "GitリポジトリのURL (https://...*.git)"
+      CFG_GIT_URL="$REPLY"
+      validate_git_url "$CFG_GIT_URL" && break
+    done
+
+    success "リポジトリ: ${CFG_GIT_URL}"
+
+    # --- Git Branch ---
+    prompt "ブランチ名" "main"
+    CFG_GIT_BRANCH="$REPLY"
+    success "ブランチ: ${CFG_GIT_BRANCH}"
+
+    # --- Git Subdir ---
+    info "スクリプトがリポジトリのサブディレクトリにある場合は指定してください。"
+    info "ルート直下にある場合は空のままEnterを押してください。"
+
+    prompt "サブディレクトリ (例: src/scripts)" ""
+    CFG_GIT_SUBDIR="$REPLY"
+
+    if [[ -n "$CFG_GIT_SUBDIR" ]]; then
+      success "サブディレクトリ: ${CFG_GIT_SUBDIR}"
+    else
+      success "サブディレクトリ: (なし - ルート直下)"
+    fi
+
+    # --- Private repo ---
+    if confirm "プライベートリポジトリですか？ (認証トークンが必要)"; then
+      CFG_PRIVATE_REPO="y"
+      warn "secret.yaml が生成されます。デプロイ前にトークンを設定してください。"
+    fi
+  else
+    success "Gitリポジトリ: (指定なし - git cloneをスキップします)"
   fi
 
   # =========================================================================
@@ -401,6 +409,7 @@ main() {
   if [[ "$CFG_EXEC_TYPE" == "cronjob" ]]; then
     echo ""
     info "cron式でスケジュールを指定してください。"
+    info "タイムゾーンはAsia/Tokyoです。"
     info "書式: 分 時 日 月 曜日"
     echo ""
     info "よく使われる例:"
@@ -460,15 +469,20 @@ main() {
   echo "  出力先:            ${BOLD}overlays/${CFG_OVERLAY_NAME}/${RESET}"
   echo "  Namespace:         ${BOLD}${CFG_NAMESPACE}${RESET}"
   echo "  プレフィックス:    ${BOLD}${CFG_NAME_PREFIX}${RESET}"
-  echo "  GitリポジトリURL:  ${BOLD}${CFG_GIT_URL}${RESET}"
-  echo "  ブランチ:          ${BOLD}${CFG_GIT_BRANCH}${RESET}"
+  if [[ -n "$CFG_GIT_URL" ]]; then
+    echo "  GitリポジトリURL:  ${BOLD}${CFG_GIT_URL}${RESET}"
+    echo "  ブランチ:          ${BOLD}${CFG_GIT_BRANCH}${RESET}"
 
-  if [[ -n "$CFG_GIT_SUBDIR" ]]; then
-    echo "  サブディレクトリ:  ${BOLD}${CFG_GIT_SUBDIR}${RESET}"
+    if [[ -n "$CFG_GIT_SUBDIR" ]]; then
+      echo "  サブディレクトリ:  ${BOLD}${CFG_GIT_SUBDIR}${RESET}"
+    fi
+
+    echo "  プライベートリポ:  ${BOLD}$([ "$CFG_PRIVATE_REPO" = "y" ] && echo "はい" || echo "いいえ")${RESET}"
+  else
+    echo "  Gitリポジトリ:     ${BOLD}(指定なし)${RESET}"
   fi
 
   echo "  実行コマンド:      ${BOLD}${CFG_SCRIPT_COMMAND}${RESET}"
-  echo "  プライベートリポ:  ${BOLD}$([ "$CFG_PRIVATE_REPO" = "y" ] && echo "はい" || echo "いいえ")${RESET}"
 
   if [[ "$CFG_EXEC_TYPE" == "cronjob" ]]; then
     echo "  スケジュール:      ${BOLD}${CFG_CRON_SCHEDULE}${RESET}"
@@ -503,15 +517,21 @@ main() {
   sed -i "s|^namespace: .*|namespace: ${CFG_NAMESPACE}|" "$kustomization"
   sed -i "s|^namePrefix: .*|namePrefix: ${CFG_NAME_PREFIX}-|" "$kustomization"
 
-  replace_config_value "$kustomization" "GIT_REPO_URL" "$CFG_GIT_URL"
-  replace_config_value "$kustomization" "GIT_BRANCH" "$CFG_GIT_BRANCH"
-  replace_config_value "$kustomization" "GIT_SUBDIR" "$CFG_GIT_SUBDIR"
   replace_config_value "$kustomization" "SCRIPT_COMMAND" "$CFG_SCRIPT_COMMAND"
 
-  # --- プライベートリポジトリ ---
-  if [[ "$CFG_PRIVATE_REPO" == "y" ]]; then
-    sed -i 's|^  # - secret.yaml|  - secret.yaml|' "$kustomization"
-    cp "${example_dir}/secret.yaml.example" "${output_dir}/secret.yaml"
+  if [[ -n "$CFG_GIT_URL" ]]; then
+    replace_config_value "$kustomization" "GIT_REPO_URL" "$CFG_GIT_URL"
+    replace_config_value "$kustomization" "GIT_BRANCH" "$CFG_GIT_BRANCH"
+    replace_config_value "$kustomization" "GIT_SUBDIR" "$CFG_GIT_SUBDIR"
+
+    # --- プライベートリポジトリ ---
+    if [[ "$CFG_PRIVATE_REPO" == "y" ]]; then
+      sed -i 's|^  # - secret.yaml|  - secret.yaml|' "$kustomization"
+      cp "${example_dir}/secret.yaml.example" "${output_dir}/secret.yaml"
+    fi
+  else
+    # Gitリポジトリ未指定: GIT_REPO_URLを空に設定 (git cloneがスキップされる)
+    replace_config_value "$kustomization" "GIT_REPO_URL" ""
   fi
 
   # --- CronJob: スケジュール ---
