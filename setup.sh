@@ -252,10 +252,10 @@ uncomment_line() {
 main() {
   echo ""
   echo "${BOLD}${GREEN}  ╔══════════════════════════════════════════════════════╗${RESET}"
-  echo "${BOLD}${GREEN}  ║       Script Runner セットアップヘルパー            ║${RESET}"
+  echo "${BOLD}${GREEN}  ║       Script Runner セットアップヘルパー             ║${RESET}"
   echo "${BOLD}${GREEN}  ╚══════════════════════════════════════════════════════╝${RESET}"
   echo ""
-  info "このツールは、KubernetesでPythonスクリプトを実行するための"
+  info "このツールは、KubernetesでPythonスクリプト等を実行するための"
   info "設定ファイルを対話的に作成します。"
   info "いくつかの質問に答えるだけで、必要なファイルが自動生成されます。"
 
@@ -331,7 +331,7 @@ main() {
   CFG_GIT_SUBDIR=""
   CFG_PRIVATE_REPO="n"
 
-  if confirm "Gitリポジトリを指定しますか？"; then
+  if confirm "Gitリポジトリを指定しますか？" "y"; then
     # --- Git URL ---
     while true; do
       prompt "GitリポジトリのURL (https://...*.git)"
