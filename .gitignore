@@ -3,12 +3,6 @@
 **/*.secret.yaml
 **/*-secret.yaml
 
-# 環境固有のオーバーレイ
-overlays/*/
-!overlays/example-single-job/
-!overlays/example-cronjob/
-!overlays/example-deployment
-
 # macOS
 .DS_Store
 

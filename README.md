@@ -10,12 +10,28 @@ Gitリポジトリから直接Pythonスクリプトを実行するためのKuber
 - **柔軟な設定**: Kustomizeで環境ごとの設定を簡単に管理
 - **Job / CronJob / Deployment 対応**: 一度きりの実行、定期実行、常駐サービスに対応
 - **Private リポジトリ対応**: GitHub Personal Access Token による認証をサポート
-- **依存関係の自動インストール**: `requirements.txt` と `pyproject.toml` の両方に対応
+- **柔軟なビルドステップ**: `BUILD_COMMAND` で任意のコマンドを指定可能 (`pip install .` / `uv sync` など)。未指定時は `pyproject.toml` / `requirements.txt` を自動検出
 - **カスタムコンテナ対応**: Git cloneなし・pipなしのイメージでも動作可能
+
+## ディレクトリ構成
+
+```
+.
+├── base/        # 共通マニフェスト (通常は編集不要)
+├── examples/    # サンプルオーバーレイ (コピーして使う)
+├── overlays/    # あなたのオーバーレイを置く場所
+├── setup.sh     # 対話的セットアップヘルパー
+└── del-and-run-single-job.sh
+```
+
+`overlays/` 以下は git の管理対象です (機密情報を含む `secret.yaml` は除く)。リポジトリをforkして使えば、自分で作成したマニフェストの差分管理ができます。
 
 ---
 
 ## クイックスタート
+
+> **Tip:** `./setup.sh` を実行すると、以下の手順を対話形式で行い、必要なファイルを自動生成できます。
+  実行する場合は、実行前に `chmod +x ./setup.sh` で実行権限を付与してください。
 
 ### Job (一度きりの実行) の場合
 #### 1. リポジトリをクローン
@@ -28,7 +44,7 @@ cd git-script-runner
 #### 2. オーバーレイを作成
 
 ```bash
-cp -r overlays/example-single-job overlays/my-single-job
+cp -r examples/single-job overlays/my-single-job
 ```
 
 #### 3. 設定をカスタマイズ
@@ -94,7 +110,7 @@ cd git-script-runner
 #### 2. オーバーレイを作成
 
 ```bash
-cp -r overlays/example-cronjob overlays/my-cronjob
+cp -r examples/cronjob overlays/my-cronjob
 ```
 
 #### 3. 設定をカスタマイズ
@@ -161,7 +177,7 @@ cd git-script-runner
 #### 2. オーバーレイを作成
 
 ```bash
-cp -r overlays/example-deployment overlays/my-deployment
+cp -r examples/deployment overlays/my-deployment
 ```
 
 #### 3. 設定をカスタマイズ
@@ -220,6 +236,7 @@ kubectl delete -k overlays/my-deployment
 | `GIT_REPO_URL` | - | - | GitリポジトリのURL (未指定の場合、git cloneをスキップ) |
 | `GIT_BRANCH` | - | `main` | クローンするブランチ |
 | `GIT_SUBDIR` | - | - | リポジトリ内のサブディレクトリ (スクリプトがサブディレクトリにある場合) |
+| `BUILD_COMMAND` | - | - | `SCRIPT_COMMAND` の前に実行するビルドコマンド。未指定時は自動検出、`skip` でスキップ (詳細は「ビルドステップ」セクション) |
 | `SCRIPT_COMMAND` | ✅ | - | 実行するコマンド |
 
 ### Secret (Private リポジトリ用)
@@ -272,13 +289,42 @@ patches:
 
 ---
 
-## 依存関係の管理
+## ビルドステップ (依存関係のインストール)
 
-スクリプトの依存関係は以下のいずれかで管理できます（優先順位順）:
+`SCRIPT_COMMAND` の実行前に、依存関係のインストール等を行うビルドステップが実行されます。動作は `BUILD_COMMAND` で制御します。
 
-### 1. pyproject.toml
+### BUILD_COMMAND を指定する場合
+
+任意のコマンドを指定できます。Pythonに限らず、どんな言語・ツールでも使えます。
+
+```yaml
+configMapGenerator:
+  - name: script-runner-config
+    behavior: replace
+    literals:
+      # 例: pipでプロジェクトをインストール
+      - BUILD_COMMAND=pip install .
+
+      # 例: uvを使う (uvが入ったイメージへの変更が必要)
+      # - BUILD_COMMAND=uv sync
+
+      # 例: ビルドステップを完全にスキップ
+      # - BUILD_COMMAND=skip
+```
+
+> **Note:** `uv` や `npm` など、デフォルトイメージ (`python:3.14-slim`) に含まれないツールを使う場合は、`job-patch.yaml` 等でコンテナイメージを変更してください。
+
+### BUILD_COMMAND を指定しない場合 (自動検出)
+
+Pythonプロジェクトとして以下の順序で自動検出します:
+
+1. `pip` コマンドが存在しない場合、依存関係のインストールをスキップ
+2. `pyproject.toml` があれば `pip install .`
+3. なければ `requirements.txt` があれば `pip install -r requirements.txt`
+4. どちらもなければ依存関係のインストールをスキップ
 
 ```toml
+# pyproject.toml の例
 [project]
 name = "my-script"
 version = "0.1.0"
@@ -288,19 +334,14 @@ dependencies = [
 ]
 ```
 
-### 2. requirements.txt
-
 ```
+# requirements.txt の例
 requests>=2.28.0
 pandas>=2.0.0
 ```
 
-entrypoint スクリプトは以下の順序でチェックします:
-1. `pip` コマンドが存在しない場合、依存関係のインストールをスキップ
-2. `pyproject.toml` があれば `pip install .`
-3. なければ `requirements.txt` があれば `pip install -r requirements.txt`
-4. どちらもなければ依存関係のインストールをスキップ
-
+> **Note:** リポジトリに `pyproject.toml` があると自動的に `pip install .` が実行されるため、プロジェクトとしてインストール可能な状態になっている必要があります。意図しないインストールを避けたい場合は `BUILD_COMMAND` を明示的に指定するか、`BUILD_COMMAND=skip` を設定してください。
+>
 > **Note:** runnerコンテナのイメージをカスタムする場合、`pip` コマンドが存在しないイメージでも正常に動作します。
 
 ## サンプルスクリプト構成

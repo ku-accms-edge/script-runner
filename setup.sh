@@ -12,6 +12,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OVERLAYS_DIR="${SCRIPT_DIR}/overlays"
+EXAMPLES_DIR="${SCRIPT_DIR}/examples"
 
 # 色コード (端末が対応していない場合は無効化)
 if [[ -t 1 ]] && command -v tput &>/dev/null && [[ $(tput colors 2>/dev/null || echo 0) -ge 8 ]]; then
@@ -402,6 +403,39 @@ main() {
 
   success "コマンド: ${CFG_SCRIPT_COMMAND}"
 
+  # --- Build Command ---
+  echo ""
+  info "実行コマンドの前に、依存関係のインストール等のビルドコマンドを実行できます。"
+
+  local build_options=(
+    "自動検出                  - pyproject.toml / requirements.txt があればpipでインストール"
+    "カスタムコマンドを指定    - 例: pip install . / uv sync / npm ci"
+    "スキップ                  - 依存関係のインストールを行わない"
+  )
+  select_option "依存関係のインストール方法を選んでください:" "${build_options[@]}"
+
+  CFG_BUILD_COMMAND=""
+  case "$SELECTED_INDEX" in
+    0)
+      success "ビルドコマンド: (自動検出)"
+      ;;
+    1)
+      while true; do
+        prompt "ビルドコマンド" "pip install ."
+        CFG_BUILD_COMMAND="$REPLY"
+        if [[ -n "$CFG_BUILD_COMMAND" ]]; then
+          break
+        fi
+        error "コマンドを入力してください"
+      done
+      success "ビルドコマンド: ${CFG_BUILD_COMMAND}"
+      ;;
+    2)
+      CFG_BUILD_COMMAND="skip"
+      success "ビルドコマンド: (スキップ)"
+      ;;
+  esac
+
   # --- タイプ固有の設定 ---
 
   # CronJob: スケジュール
@@ -484,6 +518,12 @@ main() {
 
   echo "  実行コマンド:      ${BOLD}${CFG_SCRIPT_COMMAND}${RESET}"
 
+  case "$CFG_BUILD_COMMAND" in
+    "")   echo "  ビルドコマンド:    ${BOLD}(自動検出)${RESET}" ;;
+    skip) echo "  ビルドコマンド:    ${BOLD}(スキップ)${RESET}" ;;
+    *)    echo "  ビルドコマンド:    ${BOLD}${CFG_BUILD_COMMAND}${RESET}" ;;
+  esac
+
   if [[ "$CFG_EXEC_TYPE" == "cronjob" ]]; then
     echo "  スケジュール:      ${BOLD}${CFG_CRON_SCHEDULE}${RESET}"
   fi
@@ -503,11 +543,17 @@ main() {
   # ファイル生成 (サンプルオーバーレイをコピーして編集)
   # =========================================================================
   echo ""
-  local example_dir="${OVERLAYS_DIR}/example-${CFG_EXEC_TYPE}"
+  local example_dir="${EXAMPLES_DIR}/${CFG_EXEC_TYPE}"
   local output_dir="${OVERLAYS_DIR}/${CFG_OVERLAY_NAME}"
   local kustomization="${output_dir}/kustomization.yaml"
 
   # サンプルオーバーレイをコピー
+  if [[ ! -d "$example_dir" ]]; then
+    error "サンプルディレクトリが見つかりません: ${example_dir}"
+    error "examples/ ディレクトリを削除した場合は、リポジトリから復元してください"
+    exit 1
+  fi
+  mkdir -p "$OVERLAYS_DIR"
   cp -r "$example_dir" "$output_dir"
 
   mv "${output_dir}/secret.yaml.example" "${output_dir}/secret.yaml"
@@ -517,6 +563,7 @@ main() {
   sed -i "s|^namePrefix: .*|namePrefix: ${CFG_NAME_PREFIX}-|" "$kustomization"
 
   replace_config_value "$kustomization" "SCRIPT_COMMAND" "$CFG_SCRIPT_COMMAND"
+  replace_config_value "$kustomization" "BUILD_COMMAND" "$CFG_BUILD_COMMAND"
 
   if [[ -n "$CFG_GIT_URL" ]]; then
     replace_config_value "$kustomization" "GIT_REPO_URL" "$CFG_GIT_URL"

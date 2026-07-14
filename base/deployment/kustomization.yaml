@@ -28,6 +28,7 @@ configMapGenerator:
       - GIT_REPO_URL=https://github.com/example/repo.git
       - GIT_BRANCH=main
       - GIT_SUBDIR=
+      - BUILD_COMMAND=
       - SCRIPT_COMMAND=python main.py
     options:
       disableNameSuffixHash: true

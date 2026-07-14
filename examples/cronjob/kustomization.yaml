@@ -2,30 +2,22 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # =============================================================================
-# Deployment サンプルオーバーレイ
+# CronJob サンプルオーバーレイ
 # =============================================================================
 # このファイルをコピーして、独自のオーバーレイを作成してください。
 #
 # 使い方:
-#   1. cp -r overlays/example-deployment overlays/my-deployment
-#   2. overlays/my-deployment/kustomization.yaml を編集
-#   3. kubectl apply -k overlays/my-deployment
-#
-# Service が必要な場合:
-#   resources から service.yaml を追加し、service.yaml ファイルを編集してください。
+#   1. cp -r examples/cronjob overlays/my-cronjob
+#   2. overlays/my-cronjob/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-cronjob
 # =============================================================================
 
 # [必須] デプロイ先のnamespace
 namespace: my-namespace
 
-# ベースマニフェストを参照 (Deployment用)
+# ベースマニフェストを参照 (CronJob用)
 resources:
-  - ../../base/deployment
-# =============================================================================
-# [オプション] Service を使用する場合
-# =============================================================================
-# 以下の行のコメントアウトを解除し、service.yaml を編集してください
-  # - service.yaml
+  - ../../base/cronjob
 # =============================================================================
 # [オプション] Private リポジトリを使用する場合
 # =============================================================================
@@ -33,7 +25,7 @@ resources:
   # - secret.yaml
 
 # リソース名にプレフィックスを付与
-namePrefix: myapp-
+namePrefix: myjob-
 
 # =============================================================================
 # [必須] スクリプト実行の設定
@@ -54,28 +46,49 @@ configMapGenerator:
       # スクリプトがリポジトリのルートにない場合に指定
       - GIT_SUBDIR=
 
+      # [オプション] SCRIPT_COMMAND の前に実行するビルドコマンド
+      # 例: pip install . / uv sync / npm ci
+      # "skip" を指定するとビルドステップをスキップ
+      # 未指定の場合は pyproject.toml / requirements.txt を自動検出してpipでインストール
+      - BUILD_COMMAND=
+
       # [必須] 実行するコマンド
-      # 例: python -m uvicorn main:app --host 0.0.0.0 --port 8080
+      # 例: python main.py --config config.yaml
       - SCRIPT_COMMAND=python main.py
 
 patches:
 # =============================================================================
-# [オプション] リソース制限をカスタマイズする，または，ポート番号を変更する場合
+# [必須] CronJob スケジュールの設定
 # =============================================================================
-# deployment-patch.yaml を編集してください
-  - path: deployment-patch.yaml
+# cron式でスケジュールを指定してください
+# デフォルトでは，タイムゾーンはAsia/Tokyoです
+  - patch: |-
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: script-runner
+      spec:
+        schedule: "0 9 * * 1-5"
 
 # =============================================================================
-# [オプション] Deploymentのpodにラベルを追加する場合
+# [オプション] リソース制限をカスタマイズする場合
+# =============================================================================
+# cronjob-patch.yaml を編集してください
+  - path: cronjob-patch.yaml
+
+# =============================================================================
+# [オプション] CronJobのpodにラベルを追加する場合
 # =============================================================================
 # 以下のコメントアウトを解除し、ラベル情報を編集してください
   # - patch: |-
-  #     apiVersion: apps/v1
-  #     kind: Deployment
+  #     apiVersion: batch/v1
+  #     kind: CronJob
   #     metadata:
   #       name: script-runner
   #     spec:
-  #       template:
-  #         metadata:
-  #           labels:
-  #             label-key: "label-value"
+  #       jobTemplate:
+  #         spec:
+  #           template:
+  #             metadata:
+  #               labels:
+  #                 label-key: "label-value"
