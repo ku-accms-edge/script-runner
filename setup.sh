@@ -429,6 +429,8 @@ main() {
         error "コマンドを入力してください"
       done
       success "ビルドコマンド: ${CFG_BUILD_COMMAND}"
+      info "※ デフォルトイメージ (python:3.14-slim) に含まれないツール (uv, npm 等) を"
+      info "   使う場合は、生成後にパッチファイルでコンテナイメージを変更してください。"
       ;;
     2)
       CFG_BUILD_COMMAND="skip"
