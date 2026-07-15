@@ -583,7 +583,9 @@ main() {
 
   # --- CronJob: スケジュール ---
   if [[ "$CFG_EXEC_TYPE" == "cronjob" ]]; then
-    sed -i "s|schedule: \".*\"|schedule: \"${CFG_CRON_SCHEDULE}\"|" "$kustomization"
+    local cron_schedule_escaped
+    cron_schedule_escaped=$(sed_escape "$CFG_CRON_SCHEDULE")
+    sed -i "s|schedule: \".*\"|schedule: \"${cron_schedule_escaped}\"|" "$kustomization"
   fi
 
   # --- Deployment: Service & ポート ---
