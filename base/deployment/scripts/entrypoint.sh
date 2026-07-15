@@ -5,11 +5,15 @@ set -euo pipefail
 # Git Script Runner - Entrypoint Script
 # =============================================================================
 # このスクリプトはKubernetes Pod内で実行され、以下の処理を行います:
-# 1. 依存関係のインストール (requirements.txt または pyproject.toml)
+# 1. ビルドコマンドの実行 (依存関係のインストールなど)
 # 2. 指定されたコマンドの実行
 #
 # 環境変数:
 #   GIT_SUBDIR       - リポジトリ内のサブディレクトリ (オプション)
+#   BUILD_COMMAND    - SCRIPT_COMMAND の前に実行するビルドコマンド (オプション)
+#                      例: "pip install ." / "uv sync" / "npm ci"
+#                      "skip" を指定するとビルドステップを完全にスキップ
+#                      未指定の場合は pyproject.toml / requirements.txt を自動検出
 #   SCRIPT_COMMAND   - 実行するコマンド (必須)
 #   PIP_INDEX_URL    - カスタムPyPIインデックス (オプション)
 # =============================================================================
@@ -35,12 +39,22 @@ echo ""
 cd "${SCRIPT_DIR}"
 
 # =============================================================================
-# 依存関係のインストール
+# ビルドステップ (依存関係のインストールなど)
 # =============================================================================
-echo "📦 Checking for dependencies..."
+# BUILD_COMMAND が指定されていればそれを実行する。
+# 未指定の場合は Python プロジェクトとして自動検出を試みる。
+echo "📦 Build step..."
 
-if command -v pip &> /dev/null; then
-    # pipのアップグレード
+BUILD_COMMAND="${BUILD_COMMAND:-}"
+
+if [[ "${BUILD_COMMAND}" == "skip" ]]; then
+    echo "ℹ️  BUILD_COMMAND=skip - skipping build step"
+elif [[ -n "${BUILD_COMMAND}" ]]; then
+    echo "🔨 Running build command: ${BUILD_COMMAND}"
+    bash -c "${BUILD_COMMAND}"
+    echo "✅ Build command completed"
+elif command -v pip &> /dev/null; then
+    # BUILD_COMMAND 未指定時: pyproject.toml / requirements.txt を自動検出
     pip install --upgrade pip --quiet --root-user-action=ignore
 
     if [[ -f "pyproject.toml" ]]; then

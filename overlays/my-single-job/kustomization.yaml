@@ -2,22 +2,22 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # =============================================================================
-# CronJob サンプルオーバーレイ
+# サンプルオーバーレイ
 # =============================================================================
 # このファイルをコピーして、独自のオーバーレイを作成してください。
 #
 # 使い方:
-#   1. cp -r overlays/example-cronjob overlays/my-cronjob
-#   2. overlays/my-cronjob/kustomization.yaml を編集
-#   3. kubectl apply -k overlays/my-cronjob
+#   1. cp -r overlays/example-single-job overlays/my-single-job
+#   2. overlays/my-single-job/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-single-job または ./del-and-run-single-job.sh
 # =============================================================================
 
 # [必須] デプロイ先のnamespace
-namespace: my-namespace
+namespace: morita-01-test
 
-# ベースマニフェストを参照 (CronJob用)
+# ベースマニフェストを参照
 resources:
-  - ../../base/cronjob
+  - ../../base/single-job
 # =============================================================================
 # [オプション] Private リポジトリを使用する場合
 # =============================================================================
@@ -25,7 +25,7 @@ resources:
   # - secret.yaml
 
 # リソース名にプレフィックスを付与
-namePrefix: myjob-
+namePrefix: my-single-job-
 
 # =============================================================================
 # [必須] スクリプト実行の設定
@@ -36,8 +36,8 @@ configMapGenerator:
   - name: script-runner-config
     behavior: replace
     literals:
-      # [オプション] GitリポジトリのURL
-      - GIT_REPO_URL=https://github.com/example/your-scripts.git
+      # [必須] GitリポジトリのURL
+      - GIT_REPO_URL=https://github.com/mame7777/python-run-test.git
 
       # [オプション] クローンするブランチ (デフォルト: main)
       - GIT_BRANCH=main
@@ -52,37 +52,22 @@ configMapGenerator:
 
 patches:
 # =============================================================================
-# [必須] CronJob スケジュールの設定
-# =============================================================================
-# cron式でスケジュールを指定してください
-# デフォルトでは，タイムゾーンはAsia/Tokyoです
-  - patch: |-
-      apiVersion: batch/v1
-      kind: CronJob
-      metadata:
-        name: script-runner
-      spec:
-        schedule: "0 9 * * 1-5"
-
-# =============================================================================
 # [オプション] リソース制限をカスタマイズする場合
 # =============================================================================
-# cronjob-patch.yaml を編集してください
-  - path: cronjob-patch.yaml
+# job-patch.yaml を編集してください
+  - path: job-patch.yaml
 
 # =============================================================================
-# [オプション] CronJobのpodにラベルを追加する場合
+# [オプション] Jobのpodにラベルを追加する場合
 # =============================================================================
 # 以下のコメントアウトを解除し、ラベル情報を編集してください
   # - patch: |-
   #     apiVersion: batch/v1
-  #     kind: CronJob
+  #     kind: Job
   #     metadata:
   #       name: script-runner
   #     spec:
-  #       jobTemplate:
-  #         spec:
-  #           template:
-  #             metadata:
-  #               labels:
-  #                 label-key: "label-value"
+  #       template:
+  #         metadata:
+  #           labels:
+  #             label-key: "label-value"

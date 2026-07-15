@@ -1,0 +1,79 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# サンプルオーバーレイ
+# =============================================================================
+# このファイルをコピーして、独自のオーバーレイを作成してください。
+#
+# 使い方:
+#   1. cp -r examples/single-job overlays/my-single-job
+#   2. overlays/my-single-job/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-single-job または ./del-and-run-single-job.sh
+# =============================================================================
+
+# [必須] デプロイ先のnamespace
+namespace: my-namespace
+
+# ベースマニフェストを参照
+resources:
+  - ../../base/single-job
+# =============================================================================
+# [オプション] Private リポジトリを使用する場合
+# =============================================================================
+# 以下のコメントアウトを解除し、secret.yaml を編集してください
+  # - secret.yaml
+
+# リソース名にプレフィックスを付与
+namePrefix: myjob-
+
+# =============================================================================
+# [必須] スクリプト実行の設定
+# =============================================================================
+# 以下の設定をあなたの環境に合わせて変更してください
+
+configMapGenerator:
+  - name: script-runner-config
+    behavior: replace
+    literals:
+      # [オプション] GitリポジトリのURL
+      - GIT_REPO_URL=https://github.com/example/your-scripts.git
+
+      # [オプション] クローンするブランチ (デフォルト: main)
+      - GIT_BRANCH=main
+
+      # [オプション] リポジトリ内のサブディレクトリ
+      # スクリプトがリポジトリのルートにない場合に指定
+      - GIT_SUBDIR=
+
+      # [オプション] SCRIPT_COMMAND の前に実行するビルドコマンド
+      # 例: pip install . / uv sync / npm ci
+      # "skip" を指定するとビルドステップをスキップ
+      # 未指定の場合は pyproject.toml / requirements.txt を自動検出してpipでインストール
+      - BUILD_COMMAND=
+
+      # [必須] 実行するコマンド
+      # 例: python main.py --config config.yaml
+      - SCRIPT_COMMAND=python main.py
+
+patches:
+# =============================================================================
+# [オプション] リソース制限をカスタマイズする場合
+# =============================================================================
+# job-patch.yaml を編集してください
+  - path: job-patch.yaml
+
+# =============================================================================
+# [オプション] Jobのpodにラベルを追加する場合
+# =============================================================================
+# 以下のコメントアウトを解除し、ラベル情報を編集してください
+  # - patch: |-
+  #     apiVersion: batch/v1
+  #     kind: Job
+  #     metadata:
+  #       name: script-runner
+  #     spec:
+  #       template:
+  #         metadata:
+  #           labels:
+  #             label-key: "label-value"

@@ -2,22 +2,30 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # =============================================================================
-# サンプルオーバーレイ
+# Deployment サンプルオーバーレイ
 # =============================================================================
 # このファイルをコピーして、独自のオーバーレイを作成してください。
 #
 # 使い方:
-#   1. cp -r overlays/example-single-job overlays/my-single-job
-#   2. overlays/my-single-job/kustomization.yaml を編集
-#   3. kubectl apply -k overlays/my-single-job または ./del-and-run-single-job.sh
+#   1. cp -r examples/deployment overlays/my-deployment
+#   2. overlays/my-deployment/kustomization.yaml を編集
+#   3. kubectl apply -k overlays/my-deployment
+#
+# Service が必要な場合:
+#   resources から service.yaml を追加し、service.yaml ファイルを編集してください。
 # =============================================================================
 
 # [必須] デプロイ先のnamespace
 namespace: my-namespace
 
-# ベースマニフェストを参照
+# ベースマニフェストを参照 (Deployment用)
 resources:
-  - ../../base/single-job
+  - ../../base/deployment
+# =============================================================================
+# [オプション] Service を使用する場合
+# =============================================================================
+# 以下の行のコメントアウトを解除し、service.yaml を編集してください
+  # - service.yaml
 # =============================================================================
 # [オプション] Private リポジトリを使用する場合
 # =============================================================================
@@ -25,7 +33,7 @@ resources:
   # - secret.yaml
 
 # リソース名にプレフィックスを付与
-namePrefix: myjob-
+namePrefix: myapp-
 
 # =============================================================================
 # [必須] スクリプト実行の設定
@@ -46,24 +54,30 @@ configMapGenerator:
       # スクリプトがリポジトリのルートにない場合に指定
       - GIT_SUBDIR=
 
+      # [オプション] SCRIPT_COMMAND の前に実行するビルドコマンド
+      # 例: pip install . / uv sync / npm ci
+      # "skip" を指定するとビルドステップをスキップ
+      # 未指定の場合は pyproject.toml / requirements.txt を自動検出してpipでインストール
+      - BUILD_COMMAND=
+
       # [必須] 実行するコマンド
-      # 例: python main.py --config config.yaml
+      # 例: python -m uvicorn main:app --host 0.0.0.0 --port 8080
       - SCRIPT_COMMAND=python main.py
 
 patches:
 # =============================================================================
-# [オプション] リソース制限をカスタマイズする場合
+# [オプション] リソース制限をカスタマイズする，または，ポート番号を変更する場合
 # =============================================================================
-# job-patch.yaml を編集してください
-  - path: job-patch.yaml
+# deployment-patch.yaml を編集してください
+  - path: deployment-patch.yaml
 
 # =============================================================================
-# [オプション] Jobのpodにラベルを追加する場合
+# [オプション] Deploymentのpodにラベルを追加する場合
 # =============================================================================
 # 以下のコメントアウトを解除し、ラベル情報を編集してください
   # - patch: |-
-  #     apiVersion: batch/v1
-  #     kind: Job
+  #     apiVersion: apps/v1
+  #     kind: Deployment
   #     metadata:
   #       name: script-runner
   #     spec:
