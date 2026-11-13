@@ -196,6 +196,13 @@ resources:
 
 namePrefix: my-app-  # リソース名のプレフィックス
 
+# アプリ固有のラベル (namePrefix と同じ名前を推奨)
+# 詳細は「同じ namespace で複数の Deployment を動かす場合」を参照
+labels:
+  - pairs:
+      app.kubernetes.io/instance: my-app
+    includeSelectors: true
+
 configMapGenerator:
   - name: script-runner-config
     behavior: replace
@@ -424,6 +431,36 @@ spec:
       targetPort: 3000  # deployment-patch.yaml の containerPort と合わせる
       protocol: TCP
 ```
+
+#### 同じ namespace で複数の Deployment を動かす場合
+
+ベースの Deployment と Service の selector は、`app.kubernetes.io/name: script-runner` と `app.kubernetes.io/component: deployment` の2つのラベルだけを使っています。
+`namePrefix` はリソース名を変えますが、ラベルは変えません。
+そのため、アプリ固有のラベルを付けずに2つ以上のオーバーレイを同じ namespace にデプロイすると、次の問題が起きます。
+
+- Service が、他のアプリの Pod にもリクエストを振り分ける
+- 複数の Deployment の selector が重なる
+
+`examples/deployment/kustomization.yaml` には、これを防ぐための `labels` が入っています。
+`app.kubernetes.io/instance` の値を、オーバーレイごとに異なる名前（`namePrefix` と同じ名前を推奨）に変更してください。
+`setup.sh` を使った場合は、自動で設定されます。
+
+```yaml
+labels:
+  - pairs:
+      app.kubernetes.io/instance: my-app
+    includeSelectors: true
+```
+
+> **既存のオーバーレイにこの設定を追加する場合**
+>
+> Deployment の selector は作成後に変更できないため、そのまま `kubectl apply -k` すると `field is immutable` エラーになります。
+> いったん削除してから、デプロイし直してください。
+>
+> ```bash
+> kubectl delete -k overlays/my-deployment
+> kubectl apply -k overlays/my-deployment
+> ```
 
 
 <!-- #### MetalLB による外部IP割り当て

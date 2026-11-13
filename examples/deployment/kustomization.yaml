@@ -35,6 +35,17 @@ resources:
 # リソース名にプレフィックスを付与
 namePrefix: myapp-
 
+# [必須] アプリ固有のラベル (namePrefix と同じ名前を推奨)
+# namePrefix はリソース名だけを変え、ラベルは変えません。
+# このラベルがないと、同じ namespace で複数の Deployment を動かしたときに
+# Service が他のアプリの Pod にもリクエストを振り分けてしまいます。
+# includeSelectors: true により、Deployment の selector・Pod のラベル・
+# Service の selector のすべてに追加されます。
+labels:
+  - pairs:
+      app.kubernetes.io/instance: myapp
+    includeSelectors: true
+
 # =============================================================================
 # [必須] スクリプト実行の設定
 # =============================================================================
