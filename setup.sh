@@ -590,6 +590,9 @@ main() {
 
   # --- Deployment: Service & ポート ---
   if [[ "$CFG_EXEC_TYPE" == "deployment" ]]; then
+    # アプリ固有ラベル (selector の衝突を防ぐ) に namePrefix と同じ名前を設定
+    sed -i "s|app.kubernetes.io/instance: .*|app.kubernetes.io/instance: ${CFG_NAME_PREFIX}|" "$kustomization"
+
     if [[ "$CFG_USE_SERVICE" == "y" ]]; then
       local patch_file="${output_dir}/deployment-patch.yaml"
       local service_file="${output_dir}/service.yaml"
@@ -692,7 +695,7 @@ main() {
       echo "     ${CYAN}kubectl get pods -n ${CFG_NAMESPACE}${RESET}"
       echo ""
       echo "  ${BOLD}ログの確認:${RESET}"
-      echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/name=script-runner --tail=50${RESET}"
+      echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/instance=${CFG_NAME_PREFIX} --tail=50${RESET}"
       echo ""
       echo "  ${BOLD}削除:${RESET}"
       echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
