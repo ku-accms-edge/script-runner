@@ -210,6 +210,15 @@ validate_cron_schedule() {
   return 0
 }
 
+validate_cidr() {
+  local cidr="$1"
+  if [[ ! "$cidr" =~ ^[0-9a-fA-F:.]+/[0-9]+$ ]]; then
+    error "CIDR 形式で入力してください (例: 0.0.0.0/0, 198.51.100.0/24)"
+    return 1
+  fi
+  return 0
+}
+
 validate_port() {
   local port="$1"
   if [[ ! "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
@@ -468,6 +477,8 @@ main() {
   CFG_USE_SERVICE="n"
   CFG_CONTAINER_PORT=""
   CFG_SERVICE_PORT=""
+  CFG_LB_POLICY=""
+  CFG_SOURCE_RANGE=""
   if [[ "$CFG_EXEC_TYPE" == "deployment" ]]; then
     echo ""
     info "Serviceを作成すると、他のPodやクラスタ内からアクセスできます。"
@@ -490,6 +501,34 @@ main() {
       done
 
       success "コンテナポート: ${CFG_CONTAINER_PORT}, 公開ポート: ${CFG_SERVICE_PORT}"
+
+      # --- lb-policy ---
+      echo ""
+      info "External IP の割り当て元となるアドレスプールを選択する lb-policy ラベルの値を指定してください。"
+      info "値は利用者ポータルに表示されています。"
+      info "空のままEnterを押すと、ラベルを付けずにデフォルトのポリシーが適用されます。"
+
+      prompt "lb-policy の値" ""
+      CFG_LB_POLICY="$REPLY"
+
+      if [[ -n "$CFG_LB_POLICY" ]]; then
+        success "lb-policy: ${CFG_LB_POLICY}"
+      else
+        success "lb-policy: (指定なし - デフォルトのポリシー)"
+      fi
+
+      # --- loadBalancerSourceRanges ---
+      echo ""
+      info "アクセスを許可する送信元を CIDR で指定してください。"
+      info "0.0.0.0/0 はすべての送信元からのアクセスを許可します。"
+
+      while true; do
+        prompt "アクセスを許可する送信元 (CIDR)" "0.0.0.0/0"
+        CFG_SOURCE_RANGE="$REPLY"
+        validate_cidr "$CFG_SOURCE_RANGE" && break
+      done
+
+      success "送信元: ${CFG_SOURCE_RANGE}"
     fi
   fi
 
@@ -532,6 +571,10 @@ main() {
 
   if [[ "$CFG_EXEC_TYPE" == "deployment" ]]; then
     echo "  Service作成:       ${BOLD}$([ "$CFG_USE_SERVICE" = "y" ] && echo "はい (${CFG_SERVICE_PORT} → ${CFG_CONTAINER_PORT})" || echo "いいえ")${RESET}"
+    if [[ "$CFG_USE_SERVICE" == "y" ]]; then
+      echo "  lb-policy:         ${BOLD}${CFG_LB_POLICY:-(指定なし)}${RESET}"
+      echo "  許可する送信元:    ${BOLD}${CFG_SOURCE_RANGE}${RESET}"
+    fi
   fi
 
   echo ""
@@ -607,6 +650,16 @@ main() {
       sed -i "s|containerPort: .*|containerPort: ${CFG_CONTAINER_PORT}|" "$patch_file"
       sed -i "s|^\([[:space:]]*\)port: .*|\1port: ${CFG_SERVICE_PORT}|" "$service_file"
       sed -i "s|targetPort: .*|targetPort: ${CFG_CONTAINER_PORT}|" "$service_file"
+
+      # lb-policy ラベル (未指定ならラベルと説明コメントを削除)
+      if [[ -n "$CFG_LB_POLICY" ]]; then
+        sed -i "s|lb-policy: .*|lb-policy: \"$(sed_escape "$CFG_LB_POLICY")\"|" "$service_file"
+      else
+        sed -i '/# External IP の割り当て元/,/lb-policy:/d' "$service_file"
+      fi
+
+      # アクセスを許可する送信元
+      sed -i "s|^\([[:space:]]*\)- 0\.0\.0\.0/0\$|\1- $(sed_escape "$CFG_SOURCE_RANGE")|" "$service_file"
     # else
     #   # Service を使わない場合は service.yaml を削除
     #   rm -f "${output_dir}/service.yaml"
@@ -674,22 +727,15 @@ main() {
       echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       ;;
     deployment)
-      if [[ "$CFG_USE_SERVICE" == "y" ]]; then
-        echo ""
-        echo "  ${YELLOW}${BOLD}※ デプロイ前に service.yaml を編集してください:${RESET}"
-        echo "     ${DIM}vim overlays/${CFG_OVERLAY_NAME}/service.yaml${RESET}"
-        echo ""
-        echo "     以下の項目をあなたの環境に合わせて変更してください:"
-        echo "       - ${BOLD}edge.kudpc.kyoto-u.ac.jp/egress-policy${RESET}: テナント名"
-        echo "       - ${BOLD}io.cilium/lb-ipam-ips${RESET}: 割当IPアドレス"
-        echo "       - ${BOLD}io.cilium/lb-ipam-sharing-key${RESET}: namespace名"
-        echo "       - ${BOLD}loadBalancerSourceRanges${RESET}: アクセス許可するCIDR"
-        echo ""
-      fi
       echo "     ${CYAN}kubectl apply -k overlays/${CFG_OVERLAY_NAME}${RESET}"
       echo ""
       echo "  ${BOLD}状態の確認:${RESET}"
       echo "     ${CYAN}kubectl get pods -n ${CFG_NAMESPACE}${RESET}"
+      if [[ "$CFG_USE_SERVICE" == "y" ]]; then
+        echo ""
+        echo "  ${BOLD}External IP の確認:${RESET}"
+        echo "     ${CYAN}kubectl get svc -n ${CFG_NAMESPACE} ${CFG_NAME_PREFIX}-script-runner${RESET}"
+      fi
       echo ""
       echo "  ${BOLD}ログの確認:${RESET}"
       echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/name=script-runner --tail=50${RESET}"
