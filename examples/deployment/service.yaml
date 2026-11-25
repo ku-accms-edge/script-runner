@@ -4,6 +4,8 @@
 # Service が必要な場合は、kustomization.yaml の resources から service.yaml を追加してください。
 #
 # containerPort を変更する場合は deployment-patch.yaml も合わせて変更してください。
+#
+# 参考: https://web.edge.kudpc.kyoto-u.ac.jp/manual/ja/usage/service.html
 # =============================================================================
 
 apiVersion: v1
@@ -13,13 +15,9 @@ metadata:
   labels:
     app.kubernetes.io/name: script-runner
     app.kubernetes.io/component: deployment
-    # テナント名
-    edge.kudpc.kyoto-u.ac.jp/egress-policy: "your-tenant-name"
-  annotations:
-    # 割当IPアドレス
-    io.cilium/lb-ipam-ips: "192.0.2.1"
-    # namespace名
-    io.cilium/lb-ipam-sharing-key: "your-namespace-name"
+    # External IP の割り当て元となるアドレスプールを選択するラベル
+    # 値は利用者ポータルに表示されているものを指定してください
+    edge.kudpc.kyoto-u.ac.jp/lb-policy: "your-lb-policy"
 spec:
   type: LoadBalancer
   ports:
@@ -30,5 +28,7 @@ spec:
   selector:
     app.kubernetes.io/name: script-runner
     app.kubernetes.io/component: deployment
+  # アクセスを許可する送信元 (CIDR)
+  # 指定しない場合は送信元が 127.0.0.1/32 に制限され、外部からアクセスできません
   loadBalancerSourceRanges:
     - 0.0.0.0/0
