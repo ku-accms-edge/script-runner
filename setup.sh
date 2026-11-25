@@ -255,6 +255,36 @@ uncomment_line() {
   sed -i "/${pattern}/s/# //" "$file"
 }
 
+# loadBalancerSourceRanges のリストを、指定した CIDR 1件に置き換える
+# サンプル側の値・引用符・件数には依存しない。リストが見つからなければ 1 を返す
+# Usage: replace_source_ranges <file> <cidr>
+replace_source_ranges() {
+  local file="$1" cidr="$2" out
+  out=$(awk -v cidr="$cidr" '
+    /^[ \t]*loadBalancerSourceRanges:/ { print; in_list = 1; next }
+    in_list && /^[ \t]*- / {
+      if (!replaced) {
+        match($0, /^[ \t]*/)
+        print substr($0, 1, RLENGTH) "- " cidr
+        replaced = 1
+      }
+      next
+    }
+    in_list && !/^[ \t]*(#|$)/ { in_list = 0 }
+    { print }
+    END { exit replaced ? 0 : 1 }
+  ' "$file") || return 1
+  printf '%s\n' "$out" > "$file"
+}
+
+# サンプルの形式が想定と異なり、入力値を反映できなかった場合に中断する
+# Usage: abort_generation <反映できなかった項目>
+abort_generation() {
+  error "$1 を反映できませんでした。examples/ 内のサンプルの形式を確認してください。"
+  error "作成途中の overlays/${CFG_OVERLAY_NAME} を削除してから、もう一度実行してください。"
+  exit 1
+}
+
 # ---------------------------------------------------------------------------
 # メイン処理
 # ---------------------------------------------------------------------------
@@ -481,7 +511,8 @@ main() {
   CFG_SOURCE_RANGE=""
   if [[ "$CFG_EXEC_TYPE" == "deployment" ]]; then
     echo ""
-    info "Serviceを作成すると、他のPodやクラスタ内からアクセスできます。"
+    info "Serviceを作成すると、External IP が割り当てられ、クラスタの外部からアクセスできるようになります。"
+    info "(type: LoadBalancer の Service が作成されます)"
 
     if confirm "Serviceリソースを作成しますか？"; then
       CFG_USE_SERVICE="y"
@@ -495,7 +526,7 @@ main() {
       done
 
       while true; do
-        prompt "Serviceの公開ポート番号 (クラスタ内からアクセスする際のポート)" "80"
+        prompt "Serviceの公開ポート番号 (External IP 側で受けるポート)" "80"
         CFG_SERVICE_PORT="$REPLY"
         validate_port "$CFG_SERVICE_PORT" && break
       done
@@ -520,15 +551,21 @@ main() {
       # --- loadBalancerSourceRanges ---
       echo ""
       info "アクセスを許可する送信元を CIDR で指定してください。"
-      info "0.0.0.0/0 はすべての送信元からのアクセスを許可します。"
+      info "  特定のネットワークのみ許可:  198.51.100.0/24 など"
+      info "  すべての送信元を許可:        0.0.0.0/0 (インターネット全体に公開されます)"
 
+      # 意図しない全公開を防ぐため、デフォルト値は設けない
       while true; do
-        prompt "アクセスを許可する送信元 (CIDR)" "0.0.0.0/0"
+        prompt "アクセスを許可する送信元 (CIDR)"
         CFG_SOURCE_RANGE="$REPLY"
         validate_cidr "$CFG_SOURCE_RANGE" && break
       done
 
-      success "送信元: ${CFG_SOURCE_RANGE}"
+      if [[ "$CFG_SOURCE_RANGE" == */0 ]]; then
+        warn "送信元: ${CFG_SOURCE_RANGE} (すべての送信元に公開されます)"
+      else
+        success "送信元: ${CFG_SOURCE_RANGE}"
+      fi
     fi
   fi
 
@@ -573,7 +610,11 @@ main() {
     echo "  Service作成:       ${BOLD}$([ "$CFG_USE_SERVICE" = "y" ] && echo "はい (${CFG_SERVICE_PORT} → ${CFG_CONTAINER_PORT})" || echo "いいえ")${RESET}"
     if [[ "$CFG_USE_SERVICE" == "y" ]]; then
       echo "  lb-policy:         ${BOLD}${CFG_LB_POLICY:-(指定なし)}${RESET}"
-      echo "  許可する送信元:    ${BOLD}${CFG_SOURCE_RANGE}${RESET}"
+      if [[ "$CFG_SOURCE_RANGE" == */0 ]]; then
+        echo "  許可する送信元:    ${BOLD}${CFG_SOURCE_RANGE}${RESET} ${YELLOW}⚠ すべての送信元に公開${RESET}"
+      else
+        echo "  許可する送信元:    ${BOLD}${CFG_SOURCE_RANGE}${RESET}"
+      fi
     fi
   fi
 
@@ -651,15 +692,19 @@ main() {
       sed -i "s|^\([[:space:]]*\)port: .*|\1port: ${CFG_SERVICE_PORT}|" "$service_file"
       sed -i "s|targetPort: .*|targetPort: ${CFG_CONTAINER_PORT}|" "$service_file"
 
-      # lb-policy ラベル (未指定ならラベルと説明コメントを削除)
+      # lb-policy ラベル (行はキー名で特定する。未指定ならラベル行をコメントアウト)
+      local lb_key="edge.kudpc.kyoto-u.ac.jp/lb-policy"
       if [[ -n "$CFG_LB_POLICY" ]]; then
-        sed -i "s|lb-policy: .*|lb-policy: \"$(sed_escape "$CFG_LB_POLICY")\"|" "$service_file"
+        sed -i "s|^\([[:space:]]*\)\(# *\)\{0,1\}${lb_key}:.*|\1${lb_key}: \"$(sed_escape "$CFG_LB_POLICY")\"|" "$service_file"
+        grep -qF "${lb_key}: \"${CFG_LB_POLICY}\"" "$service_file" \
+          || abort_generation "lb-policy"
       else
-        sed -i '/# External IP の割り当て元/,/lb-policy:/d' "$service_file"
+        sed -i "s|^\([[:space:]]*\)\(${lb_key}:.*\)|\1# \2|" "$service_file"
       fi
 
       # アクセスを許可する送信元
-      sed -i "s|^\([[:space:]]*\)- 0\.0\.0\.0/0\$|\1- $(sed_escape "$CFG_SOURCE_RANGE")|" "$service_file"
+      replace_source_ranges "$service_file" "$CFG_SOURCE_RANGE" \
+        || abort_generation "loadBalancerSourceRanges"
     # else
     #   # Service を使わない場合は service.yaml を削除
     #   rm -f "${output_dir}/service.yaml"
