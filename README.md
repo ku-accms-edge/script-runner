@@ -200,7 +200,7 @@ namePrefix: my-app-  # リソース名のプレフィックス
 # 詳細は「同じ namespace で複数の Deployment を動かす場合」を参照
 labels:
   - pairs:
-      app.kubernetes.io/instance: my-app
+      app.kubernetes.io/instance: "my-app"
     includeSelectors: true
 
 configMapGenerator:
@@ -448,7 +448,7 @@ spec:
 ```yaml
 labels:
   - pairs:
-      app.kubernetes.io/instance: my-app
+      app.kubernetes.io/instance: "my-app"
     includeSelectors: true
 ```
 

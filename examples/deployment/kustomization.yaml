@@ -43,7 +43,7 @@ namePrefix: myapp-
 # Service の selector のすべてに追加されます。
 labels:
   - pairs:
-      app.kubernetes.io/instance: myapp
+      app.kubernetes.io/instance: "myapp"
     includeSelectors: true
 
 # =============================================================================
