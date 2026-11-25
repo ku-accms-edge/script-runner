@@ -172,8 +172,9 @@ validate_name_prefix() {
     error "プレフィックスを入力してください"
     return 1
   fi
-  if [[ ! "$prefix" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
-    error "英小文字・数字・ハイフンのみ使用できます"
+  # ラベル値 (app.kubernetes.io/instance) にも使うため、末尾のハイフンは不可
+  if [[ ! "$prefix" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+    error "英小文字・数字・ハイフンのみ使用できます (先頭と末尾は英小文字か数字)"
     return 1
   fi
   return 0
@@ -590,6 +591,10 @@ main() {
 
   # --- Deployment: Service & ポート ---
   if [[ "$CFG_EXEC_TYPE" == "deployment" ]]; then
+    # アプリ固有ラベル (selector の衝突を防ぐ) に namePrefix と同じ名前を設定
+    # 値はクォートする ('123' や 'on' が YAML で数値・真偽値として解釈されるのを防ぐ)
+    sed -i "s|app.kubernetes.io/instance: .*|app.kubernetes.io/instance: \"${CFG_NAME_PREFIX}\"|" "$kustomization"
+
     if [[ "$CFG_USE_SERVICE" == "y" ]]; then
       local patch_file="${output_dir}/deployment-patch.yaml"
       local service_file="${output_dir}/service.yaml"
@@ -692,7 +697,7 @@ main() {
       echo "     ${CYAN}kubectl get pods -n ${CFG_NAMESPACE}${RESET}"
       echo ""
       echo "  ${BOLD}ログの確認:${RESET}"
-      echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/name=script-runner --tail=50${RESET}"
+      echo "     ${CYAN}kubectl logs -n ${CFG_NAMESPACE} -l app.kubernetes.io/instance=${CFG_NAME_PREFIX} --tail=50${RESET}"
       echo ""
       echo "  ${BOLD}削除:${RESET}"
       echo "     ${CYAN}kubectl delete -k overlays/${CFG_OVERLAY_NAME}${RESET}"
